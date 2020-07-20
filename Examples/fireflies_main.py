@@ -22,21 +22,31 @@ if __name__ == "__main__":
         except:
             pass
 
+# Python imports
+import os
+import random
 import sys
 sys.path.append('..')
 
-import AGeLib as age
-from AGeLib import NC
-
+# Panda imports
 import panda3d as p3d
 import panda3d.core as p3dc
 from direct.showbase.ShowBase import ShowBase
-
-
-#import direct.directbase.DirectStart #This import does not import anything but instead starts a ShowBase instance
 from direct.showbase.DirectObject import DirectObject
-#from pandac.PandaModules import p3dc.WindowProperties
+from direct.gui.OnscreenText import OnscreenText
+from direct.showbase.DirectObject import DirectObject
+from direct.interval.MetaInterval import Sequence
+from direct.task.Task import Task
+from direct.actor.Actor import Actor
 
+# AGE and APE imports
+import AGeLib as age # pylint: disable=import-error
+from AGeLib import NC # pylint: disable=import-error
+
+import AstusPandaEngine as ape # pylint: disable=import-error
+from AstusPandaEngine import window, engine # pylint: disable=import-error
+
+# Qt imports
 from PyQt5.QtCore import pyqtProperty, pyqtSignal, qFuzzyCompare, QObject, QPropertyAnimation # pylint: disable=no-name-in-module
 from PyQt5.QtGui import QMatrix4x4, QQuaternion, QVector3D # pylint: disable=no-name-in-module
 from PyQt5 import QtWidgets,QtCore,QtGui,Qt , Qt3DAnimation,Qt3DCore,Qt3DExtras,Qt3DInput,Qt3DLogic,Qt3DRender , QtQml
@@ -45,18 +55,7 @@ try:
 except:
     from PyQtWebEngine.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings
 
-import os
-import random
-
-import AstusPandaEngine as ape # pylint: disable=import-error
-from AstusPandaEngine import window, engine # pylint: disable=import-error
-
 #
-from direct.gui.OnscreenText import OnscreenText
-from direct.showbase.DirectObject import DirectObject
-from direct.interval.MetaInterval import Sequence
-from direct.task.Task import Task
-from direct.actor.Actor import Actor
 
 #region Helper functions
 # Function to put instructions on the screen.
