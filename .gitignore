@@ -1,0 +1,16 @@
+
+*.driveupload
+*.bat
+.spyproject
+__pycache__
+.directory
+.tmp.drivedownload
+TestCode
+Config
+*.code-workspace
+.vscode
+Test.py
+first Tries/
+
+!WINDOWS-INSTALL/**
+
