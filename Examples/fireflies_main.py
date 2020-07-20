@@ -22,7 +22,11 @@ if __name__ == "__main__":
         except:
             pass
 
+import sys
+sys.path.append('..')
+
 import AGeLib as age
+from AGeLib import NC
 
 import panda3d as p3d
 import panda3d.core as p3dc
@@ -41,13 +45,11 @@ try:
 except:
     from PyQtWebEngine.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings
 
-import sys
-sys.path.append('..')
 import os
 import random
 
-import AstusPandaEngine as ape
-from AstusPandaEngine import window, engine
+import AstusPandaEngine as ape # pylint: disable=import-error
+from AstusPandaEngine import window, engine # pylint: disable=import-error
 
 #
 from direct.gui.OnscreenText import OnscreenText
@@ -91,7 +93,7 @@ class MainWindowClass(ape.APEWindow):
         self.main_layout.setContentsMargins(0,0,0,0)
         self.main_layout.addWidget(self.pandaContainer)
         self.dialLayout = QtWidgets.QHBoxLayout()
-        self.dialLayout.setContentsMargins(0,0,0,0)
+        self.dialLayout.setContentsMargins(10,0,10,0)
         self.dialLayoutWidget = QtWidgets.QWidget(self)
         self.dialLayoutWidget.setLayout(self.dialLayout)
         self.main_layout.addWidget(self.dialLayoutWidget)
@@ -108,7 +110,7 @@ class MainWindowClass(ape.APEWindow):
         
         self.cw.setLayout(self.main_layout)
 
-    def updateReadout(self):
+    def updateReadout(self): #unused
         ape.base().inst2.destroy()
         ape.base().inst2 = addInstructions(0.12,
             "Up/Down: More / Fewer Fireflies (Currently: %d)" % len(ape.base().fireflies))
@@ -116,7 +118,7 @@ class MainWindowClass(ape.APEWindow):
         ape.base().inst3 = addInstructions(0.18,
             "Right/Left: Bigger / Smaller Fireflies (Radius: %d ft)" % ape.base().fireflysize)
 
-    def toggleCards(self):
+    def toggleCards(self): #unused
         ape.base().bufferViewer.toggleEnable()
         # When the cards are not visible, I also disable the color clear.
         # This color-clear is actually not necessary, the depth-clear is
@@ -126,13 +128,13 @@ class MainWindowClass(ape.APEWindow):
         else:
             ape.base().modelbuffer.setClearColorActive(False)
 
-    def incFireflyCount(self, scale):
+    def incFireflyCount(self, scale): #unused
         n = int((len(ape.base().fireflies) * scale) + 1)
         while (n > len(ape.base().fireflies)):
             ape.base().addFirefly()
         ape.base().updateReadout()
 
-    def decFireflyCount(self, scale):
+    def decFireflyCount(self, scale): #unused
         n = int(len(ape.base().fireflies) * scale)
         if (n < 1):
             n = 1
@@ -159,32 +161,26 @@ class BaseClass(ape.APEPandaBase):
         # Preliminary capabilities check.
 
         if not self.win.getGsg().getSupportsBasicShaders():
-            self.t = addTitle("Firefly Demo: Video driver reports that Cg "
-                              "shaders are not supported.")
+            NC(1,"Firefly Demo: Video driver reports that Cg shaders are not supported.")
             return
         if not self.win.getGsg().getSupportsDepthTexture():
-            self.t = addTitle("Firefly Demo: Video driver reports that depth "
-                              "textures are not supported.")
+            NC(1,"Firefly Demo: Video driver reports that depth textures are not supported.")
             return
 
         # This algorithm uses two offscreen buffers, one of which has
         # an auxiliary bitplane, and the offscreen buffers share a single
         # depth buffer.  This is a heck of a complicated buffer setup.
-
         self.modelbuffer = self.makeFBO("model buffer", 1)
         self.lightbuffer = self.makeFBO("light buffer", 0)
 
         # Creation of a high-powered buffer can fail, if the graphics card
         # doesn't support the necessary OpenGL extensions.
-
         if self.modelbuffer is None or self.lightbuffer is None:
-            self.t = addTitle("Firefly Demo: Video driver does not support "
-                              "multiple render targets")
+            NC(1,"Firefly Demo: Video driver does not support multiple render targets")
             return
 
         # Create four render textures: depth, normal, albedo, and final.
         # attach them to the various bitplanes of the offscreen buffers.
-
         self.texDepth = p3dc.Texture()
         self.texDepth.setFormat(p3dc.Texture.FDepthStencil)
         self.texAlbedo = p3dc.Texture()
@@ -202,7 +198,6 @@ class BaseClass(ape.APEPandaBase):
             p3dc.GraphicsOutput.RTMBindOrCopy, p3dc.GraphicsOutput.RTPColor)
 
         # Set the near and far clipping planes.
-
         self.cam.node().getLens().setNear(50.0)
         self.cam.node().getLens().setFar(500.0)
         lens = self.cam.node().getLens()
@@ -217,32 +212,28 @@ class BaseClass(ape.APEPandaBase):
         self.plainMask = 4
 
         self.modelcam = self.makeCamera(self.modelbuffer,
-            lens=lens, scene=render, mask=self.modelMask)
+            lens=lens, scene=self.render, mask=self.modelMask)
         self.lightcam = self.makeCamera(self.lightbuffer,
-            lens=lens, scene=render, mask=self.lightMask)
+            lens=lens, scene=self.render, mask=self.lightMask)
         self.plaincam = self.makeCamera(self.lightbuffer,
-            lens=lens, scene=render, mask=self.plainMask)
+            lens=lens, scene=self.render, mask=self.plainMask)
 
         # Panda's main camera is not used.
-
         self.cam.node().setActive(0)
 
         # Take explicit control over the order in which the three
         # buffers are rendered.
-
         self.modelbuffer.setSort(1)
         self.lightbuffer.setSort(2)
         self.win.setSort(3)
 
         # Within the light buffer, control the order of the two cams.
-
         self.lightcam.node().getDisplayRegion(0).setSort(1)
         self.plaincam.node().getDisplayRegion(0).setSort(2)
 
         # By default, panda usually clears the screen before every
         # camera and before every window.  Tell it not to do that.
         # Then, tell it specifically when to clear and what to clear.
-
         self.modelcam.node().getDisplayRegion(0).disableClears()
         self.lightcam.node().getDisplayRegion(0).disableClears()
         self.plaincam.node().getDisplayRegion(0).disableClears()
@@ -257,7 +248,6 @@ class BaseClass(ape.APEPandaBase):
         self.lightbuffer.setClearColor((0, 0, 0, 1))
 
         # Miscellaneous stuff.
-
         self.disableMouse()
         self.camera.setPos(-9.112, -211.077, 46.951)
         self.camera.setHpr(0, -7.5, 2.4)
@@ -266,7 +256,6 @@ class BaseClass(ape.APEPandaBase):
         # Calculate the projection parameters for the final shader.
         # The math here is too complex to explain in an inline comment,
         # I've put in a full explanation into the HTML intro.
-
         proj = self.cam.node().getLens().getProjectionMat()
         proj_x = 0.5 * proj.getCell(3, 2) / proj.getCell(0, 0)
         proj_y = 0.5 * proj.getCell(3, 2)
@@ -274,18 +263,16 @@ class BaseClass(ape.APEPandaBase):
         proj_w = -0.5 - 0.5 * proj.getCell(1, 2)
 
         # Configure the render state of the model camera.
-
         tempnode = p3dc.NodePath(p3dc.PandaNode("temp node"))
         tempnode.setAttrib(
             p3dc.AlphaTestAttrib.make(p3dc.RenderAttrib.MGreaterEqual, 0.5))
-        tempnode.setShader(loader.loadShader("fireflies_model.sha"))
+        tempnode.setShader(self.loader.loadShader("fireflies_model.sha"))
         tempnode.setAttrib(p3dc.DepthTestAttrib.make(p3dc.RenderAttrib.MLessEqual))
         self.modelcam.node().setInitialState(tempnode.getState())
 
         # Configure the render state of the light camera.
-
         tempnode = p3dc.NodePath(p3dc.PandaNode("temp node"))
-        tempnode.setShader(loader.loadShader("fireflies_light.sha"))
+        tempnode.setShader(self.loader.loadShader("fireflies_light.sha"))
         tempnode.setShaderInput("texnormal", self.texNormal)
         tempnode.setShaderInput("texalbedo", self.texAlbedo)
         tempnode.setShaderInput("texdepth", self.texDepth)
@@ -300,7 +287,6 @@ class BaseClass(ape.APEPandaBase):
         self.lightcam.node().setInitialState(tempnode.getState())
 
         # Configure the render state of the plain camera.
-
         rs = p3dc.RenderState.makeEmpty()
         self.plaincam.node().setInitialState(rs)
 
@@ -310,22 +296,19 @@ class BaseClass(ape.APEPandaBase):
         # carefully-configured render attribs that we just attached
         # to the cameras.  The simplest solution is to just clear
         # them all out.
-
-        render.setState(p3dc.RenderState.makeEmpty())
+        self.render.setState(p3dc.RenderState.makeEmpty())
 
         # My artist created a model in which some of the polygons
         # don't have textures.  This confuses the shader I wrote.
         # This little hack guarantees that everything has a texture.
-
-        white = loader.loadTexture("fireflies_models/white.jpg")
-        render.setTexture(white, 0)
+        white = self.loader.loadTexture("fireflies_models/white.jpg")
+        self.render.setTexture(white, 0)
 
         # Create two subroots, to help speed cull traversal.
-
         self.lightroot = p3dc.NodePath(p3dc.PandaNode("lightroot"))
-        self.lightroot.reparentTo(render)
+        self.lightroot.reparentTo(self.render)
         self.modelroot = p3dc.NodePath(p3dc.PandaNode("modelroot"))
-        self.modelroot.reparentTo(render)
+        self.modelroot.reparentTo(self.render)
         self.lightroot.hide(p3dc.BitMask32(self.modelMask))
         self.modelroot.hide(p3dc.BitMask32(self.lightMask))
         self.modelroot.hide(p3dc.BitMask32(self.plainMask))
@@ -336,9 +319,9 @@ class BaseClass(ape.APEPandaBase):
         self.loading = addTitle("Loading models...")
 
         self.forest = p3dc.NodePath(p3dc.PandaNode("Forest Root"))
-        self.forest.reparentTo(render)
+        self.forest.reparentTo(self.render)
         self.forest.hide(p3dc.BitMask32(self.lightMask | self.plainMask))
-        loader.loadModel([
+        self.loader.loadModel([
             "fireflies_models/background",
             "fireflies_models/foliage01",
             "fireflies_models/foliage02",
@@ -351,16 +334,13 @@ class BaseClass(ape.APEPandaBase):
             "fireflies_models/foliage09"],
             callback=self.finishLoading)
 
-        # Cause the final results to be rendered into the main window on a
-        # card.
-
+        # Cause the final results to be rendered into the main window on a card.
         self.card = self.lightbuffer.getTextureCard()
         self.card.setTexture(self.texFinal)
-        self.card.reparentTo(render2d)
+        self.card.reparentTo(self.render2d)
 
         # Panda contains a built-in viewer that lets you view the results of
         # your render-to-texture operations.  This code configures the viewer.
-
         self.bufferViewer.setPosition("llcorner")
         self.bufferViewer.setCardSize(0, 0.40)
         self.bufferViewer.setLayout("vline")
@@ -368,25 +348,23 @@ class BaseClass(ape.APEPandaBase):
         self.toggleCards()
 
         # Firefly parameters
-
         self.fireflies = []
         self.sequences = []
         self.scaleseqs = []
         self.glowspheres = []
         self.fireflysize = 1.0
-        self.spheremodel = loader.loadModel("misc/sphere")
+        self.spheremodel = self.loader.loadModel("misc/sphere")
 
         # Create the firefly model, a fuzzy dot
         dotSize = 1.0
         cm = p3dc.CardMaker("firefly")
         cm.setFrame(-dotSize, dotSize, -dotSize, dotSize)
         self.firefly = p3dc.NodePath(cm.generate())
-        self.firefly.setTexture(loader.loadTexture("fireflies_models/firefly.png"))
+        self.firefly.setTexture(self.loader.loadTexture("fireflies_models/firefly.png"))
         self.firefly.setAttrib(p3dc.ColorBlendAttrib.make(p3dc.ColorBlendAttrib.M_add,
             p3dc.ColorBlendAttrib.O_incoming_alpha, p3dc.ColorBlendAttrib.O_one))
 
         # these allow you to change parameters in realtime
-
         self.accept("arrow_up",   self.incFireflyCount, [1.1111111])
         self.accept("arrow_down", self.decFireflyCount, [0.9000000])
         self.accept("arrow_right", self.setFireflySize, [1.1111111])
@@ -414,7 +392,7 @@ class BaseClass(ape.APEPandaBase):
         self.updateReadout()
 
         self.nextadd = 0
-        taskMgr.add(self.spawnTask, "spawner")
+        self.taskMgr.add(self.spawnTask, "spawner")
 
     def makeFBO(self, name, auxrgba):
         # This routine creates an offscreen buffer.  All the complicated

@@ -26,7 +26,11 @@ if __name__ == "__main__":
         except:
             pass
 
+import sys
+sys.path.append('..')
+
 import AGeLib as age
+from AGeLib import NC
 
 import panda3d as p3d
 import panda3d.core as p3dc
@@ -45,8 +49,6 @@ try:
 except:
     from PyQtWebEngine.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings
 
-import sys
-sys.path.append('..')
 
 import AstusPandaEngine as ape
 from AstusPandaEngine import window, engine
