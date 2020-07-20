@@ -93,8 +93,12 @@ class APEWindow(age.AWWF):
         layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.pandaContainer)
         
-        #self.lineedit = QtWidgets.QLineEdit("Write something...does it work?")
-        #layout.addWidget(self.lineedit)
+        self.lineedit = age.LineEdit(self, PlaceholderText = "Write something and press return to generate a Notification")
+        def sendMessage():
+            NC(3,self.lineedit.text(),DplStr="LineEdit Input")
+            self.lineedit.clear()
+        self.lineedit.returnPressed.connect(sendMessage)
+        layout.addWidget(self.lineedit)
         
         self.cw.setLayout(layout)
 

@@ -1313,7 +1313,7 @@ class LineEdit(ATextEdit):
     Please note that multiline text is converted to a single line in which each former line is placed in brackets and separated by plus signs.
     To change this behaviour reimplement ``.insertFromMimeData(self,Data)``.
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent = None, PlaceholderText = None):
         super(LineEdit, self).__init__(parent)
         
         self.RowHeight = QtGui.QFontMetrics(self.font()).lineSpacing()
@@ -1321,6 +1321,8 @@ class LineEdit(ATextEdit):
         self.setLineWrapMode(QtWidgets.QTextEdit.NoWrap)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        if PlaceholderText:
+            self.setPlaceholderText(PlaceholderText)
         
         self.installEventFilter(self)
         # Connect Signals
