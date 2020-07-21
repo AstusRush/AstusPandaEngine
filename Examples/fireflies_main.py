@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Original Author: Josh Yelon
-# Modified to work with APE: Robin Albers
+# Updated to APE by Robin Albers
 # Date: 2020-07-20
 #
 # See the associated manual page for an explanation.

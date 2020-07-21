@@ -1,3 +1,7 @@
+
+Version = "developer preview"
+version = Version
+
 import AGeLib as age
 from AGeLib import NC
 
@@ -30,6 +34,12 @@ def engine():
 
 def base():
     return age.App().base
+    
+def render():
+    return age.App().base.render
+    
+def loader():
+    return age.App().base.loader
 
 def window():
     return age.App().MainWindow
@@ -222,6 +232,7 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
     p3dc.loadPrcFileData("", "window-type none")
     _base = base()
     _app = app(_base, sys.argv)
+    _app.ModuleVersions += f"\nAstus Panda Engine {Version}\nPanda3D {p3d.__version__}"
     _engine = engine(_base)
     _window = window(widget)
     _app.setMainWindow(_window)
@@ -256,6 +267,10 @@ class APEScene():
     def addModel(self, model, name):
         self._models[name] = model
         return model
+        
+class APEObject():
+    def __init__(self):
+        pass
 
 
 #endregion Main Classes

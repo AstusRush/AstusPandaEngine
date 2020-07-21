@@ -114,17 +114,17 @@ class BaseClass(ape.APEPandaBase):
                                   style=1, fg=(1, 1, 1, 1), shadow=(0, 0, 0, 1),
                                   pos=(0.8, -0.95), scale = .07)
         self.escapeEvent = OnscreenText(
-            text="ESC: Quit", parent=base.a2dTopLeft,
+            text="ESC: Quit", parent=self.a2dTopLeft,
             style=1, fg=(1, 1, 1, 1), pos=(0.06, -0.1),
             align=p3dc.TextNode.ALeft, scale = .05)
         self.mouse1Event = OnscreenText(
             text="Left-click and drag: Pick up and drag piece",
-            parent=base.a2dTopLeft, align=p3dc.TextNode.ALeft,
+            parent=self.a2dTopLeft, align=p3dc.TextNode.ALeft,
             style=1, fg=(1, 1, 1, 1), pos=(0.06, -0.16), scale=.05)
 
         self.accept('escape', sys.exit)  # Escape quits
         self.disableMouse()  # Disble mouse camera control
-        camera.setPosHpr(0, -12, 8, 0, -35, 0)  # Set the camera
+        self.camera.setPosHpr(0, -12, 8, 0, -35, 0)  # Set the camera
         self.setupLights()  # Setup default lighting
 
         # Since we are using collision detection to do picking, we set it up like
@@ -135,7 +135,7 @@ class BaseClass(ape.APEPandaBase):
         self.pickerNode = p3dc.CollisionNode('mouseRay')
         # Attach that node to the camera since the ray will need to be positioned
         # relative to it
-        self.pickerNP = camera.attachNewNode(self.pickerNode)
+        self.pickerNP = self.camera.attachNewNode(self.pickerNode)
         # Everything to be picked will use bit 1. This way if we were doing other
         # collision we could separate it
         self.pickerNode.setFromCollideMask(p3dc.BitMask32.bit(1))
@@ -151,7 +151,7 @@ class BaseClass(ape.APEPandaBase):
         # We will attach all of the squares to their own root. This way we can do the
         # collision pass just on the squares and save the time of checking the rest
         # of the scene
-        self.squareRoot = render.attachNewNode("squareRoot")
+        self.squareRoot = self.render.attachNewNode("squareRoot")
 
         # For each square
         self.squares = [None for i in range(64)]
@@ -159,7 +159,7 @@ class BaseClass(ape.APEPandaBase):
         for i in range(64):
             # Load, parent, color, and position the model (a single square
             # polygon)
-            self.squares[i] = loader.loadModel("chessboard_models/square")
+            self.squares[i] = self.loader.loadModel("chessboard_models/square")
             self.squares[i].reparentTo(self.squareRoot)
             self.squares[i].setPos(SquarePos(i))
             self.squares[i].setColor(SquareColor(i))
@@ -200,7 +200,7 @@ class BaseClass(ape.APEPandaBase):
         self.dragging = False
 
         # Start the task that handles the picking
-        self.mouseTask = taskMgr.add(self.mouseTask, 'mouseTask')
+        self.mouseTask = self.taskMgr.add(self._mouseTask, 'mouseTask')
         self.accept("mouse1", self.grabPiece)  # left-click grabs a piece
         self.accept("mouse1-up", self.releasePiece)  # releasing places it
 
@@ -216,7 +216,7 @@ class BaseClass(ape.APEPandaBase):
             self.pieces[to].square = to
             self.pieces[to].obj.setPos(SquarePos(to))
 
-    def mouseTask(self, task):
+    def _mouseTask(self, task):
         # This task deals with the highlighting and dragging based on the mouse
 
         # First, clear the current highlight
@@ -238,11 +238,11 @@ class BaseClass(ape.APEPandaBase):
             if self.dragging is not False:
                 # Gets the point described by pickerRay.getOrigin(), which is relative to
                 # camera, relative instead to render
-                nearPoint = render.getRelativePoint(
-                    camera, self.pickerRay.getOrigin())
+                nearPoint = self.render.getRelativePoint(
+                    self.camera, self.pickerRay.getOrigin())
                 # Same thing with the direction of the ray
-                nearVec = render.getRelativeVector(
-                    camera, self.pickerRay.getDirection())
+                nearVec = self.render.getRelativeVector(
+                    self.camera, self.pickerRay.getDirection())
                 self.pieces[self.dragging].obj.setPos(
                     PointAtZ(.5, nearPoint, nearVec))
 
@@ -288,16 +288,17 @@ class BaseClass(ape.APEPandaBase):
         directionalLight = p3dc.DirectionalLight("directionalLight")
         directionalLight.setDirection(p3dc.LVector3(0, 45, -45))
         directionalLight.setColor((0.2, 0.2, 0.2, 1))
-        render.setLight(render.attachNewNode(directionalLight))
-        render.setLight(render.attachNewNode(ambientLight))
+        self.render.setLight(self.render.attachNewNode(directionalLight))
+        self.render.setLight(self.render.attachNewNode(ambientLight))
 
 #region piece classes
 # Class for a piece. This just handles loading the model and setting initial
 # position and color
 class Piece(object):
+    model = "chessboard_models/pawn" #Placeholder overwritten by subclasses
     def __init__(self, square, color):
-        self.obj = loader.loadModel(self.model)
-        self.obj.reparentTo(render)
+        self.obj = ape.base().loader.loadModel(self.model)
+        self.obj.reparentTo(ape.base().render)
         self.obj.setColor(color)
         self.obj.setPos(SquarePos(square))
 
