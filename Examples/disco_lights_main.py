@@ -348,7 +348,7 @@ class BaseClass(ape.APEPandaBase):
     # labels
     def getBrightnessString(self, light):
         color = light.node().getColor()
-        h, s, b = colorsys.rgb_to_hsv(color[0], color[1], color[2])
+        _, _, b = colorsys.rgb_to_hsv(color[0], color[1], color[2])
         return "%.2f" % b
 
 
