@@ -145,6 +145,7 @@ class APEPandaBase(ShowBase):
     def registerWindow(self,window):
         self.MainWindow = window
         self.accept("f11", self.MainWindow.toggleFullscreen)
+        self.accept("f12", lambda: age.App().MakeScreenshot(self.MainWindow))
         wp = p3dc.WindowProperties()
         wp.setOrigin(0,0)
         wp.setSize(P3D_WIN_WIDTH, P3D_WIN_HEIGHT)

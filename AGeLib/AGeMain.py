@@ -1,6 +1,6 @@
 # Astus General Library Main File
 
-Version = "2.1.0-devSnapshot-1"
+Version = "2.1.0-devSnapshot-2"
 # Using Semantic Versioning 2.0.0 https://semver.org/
 version = Version
 Author = "Robin \'Astus\' Albers"
@@ -513,7 +513,7 @@ def cTimeFullStr(separator = None):
 def advancedMode() -> bool:
     """
     Used to check whether the advanced mode is active in the application.   \n
-    The ``Main_App`` emits ``S_advanced_mode_changed`` when ``ToggleAdvancedMode`` is called.   \n
+    The ``MainApp`` emits ``S_advanced_mode_changed`` when ``ToggleAdvancedMode`` is called.   \n
     "Dangerous" functions and "rarely used" should only be accessible if the advanced mode is on.
     - "Dangerous": Dev-functions and anything that a user should not accidentely press.
     - "rarely used": Anything that is rarely used and would clutter up the UI.   \n
@@ -539,7 +539,7 @@ GroupSwitchModifier = QtCore.Qt.GroupSwitchModifier
 ShiftModifier = QtCore.Qt.ShiftModifier
 MetaModifier = QtCore.Qt.MetaModifier
 
-class Main_App(QtWidgets.QApplication):
+class MainApp(QtWidgets.QApplication):
     """
     This class is the core of AGeLib.   \n
     Methods beginning with ``r_`` are virtual templates that can be reimplemented.   \n
@@ -557,7 +557,7 @@ class Main_App(QtWidgets.QApplication):
     S_advanced_mode_changed = pyqtSignal(bool)
     def __init__(self, args):
         self.enableHotkeys = True
-        super(Main_App, self).__init__(args)
+        super(MainApp, self).__init__(args)
         self.setStyle("fusion")
         self.setAttribute(QtCore.Qt.AA_DontUseNativeMenuBar) #Fixes to bar widget on MacOS/OSX/darwin/Apples OS
         sys.excepthook = trap_exc_during_debug
@@ -642,31 +642,11 @@ class Main_App(QtWidgets.QApplication):
                     return True
             if True: #Any Modifier
                 if event.key() == QtCore.Qt.Key_F12:
-                    if self.AGeLibPathOK:
-                        name = self.applicationName()
-                        nameValid = ""
-                        for i in name:
-                            if i in string.ascii_letters + string.digits + "~ -_.":
-                                nameValid += i
-                        nameValid = nameValid.replace(" ","")
-                        Filename = nameValid + "-" + cTimeFullStr("-") + ".png"
-                        Filename = os.path.join(self.ScreenshotFolderPath,Filename)
-                        try:
-                            try:
-                                WID = source.window().winId()
-                                screen = source.window().screen()
-                            except:
-                                WID = source.winId()
-                                screen = source.screen()
-                            screen.grabWindow(WID).save(Filename)
-                            print(Filename)
-                        except:
-                            NC(msg="Could not save Screenshot",exc=sys.exc_info(),func="Main_App.eventFilter",input=Filename)
-                        else:
-                            NC(3,"Screenshot of currently active window saved as:\n"+Filename,func="Main_App.eventFilter",input=Filename)
-                    else:
-                        print("Could not save Screenshot: Could not validate save location")
-                        NC(1,"Could not save Screenshot: Could not validate save location",func="Main_App.eventFilter",input=self.AGeLibPath)
+                    try:
+                        _ , _ = source.window().winId(), source.window().screen() # Check if this exists
+                        self.MakeScreenshot(source.window())
+                    except:
+                        self.MakeScreenshot(source)
                     return True
                 if event.key() == QtCore.Qt.Key_F9: # FEATURE: HelpWindow: Inform the User that this feature exists. Make Help window that is opened with F1
                     for w in self.topLevelWidgets():
@@ -676,7 +656,30 @@ class Main_App(QtWidgets.QApplication):
         elif event.type() == NotificationEvent.EVENT_TYPE:
             self._NotifyUser(event.N)
             return True
-        return super(Main_App, self).eventFilter(source, event)
+        return super(MainApp, self).eventFilter(source, event)
+
+    def MakeScreenshot(self,window):
+        if self.AGeLibPathOK:
+            name = self.applicationName()
+            nameValid = ""
+            for i in name:
+                if i in string.ascii_letters + string.digits + "~ -_.":
+                    nameValid += i
+            nameValid = nameValid.replace(" ","")
+            Filename = nameValid + "-" + cTimeFullStr("-") + ".png"
+            Filename = os.path.join(self.ScreenshotFolderPath,Filename)
+            try:
+                WID = window.winId()
+                screen = window.screen()
+                screen.grabWindow(WID).save(Filename)
+                print(Filename)
+            except:
+                NC(msg="Could not save Screenshot",exc=sys.exc_info(),func="MainApp.eventFilter",input=Filename)
+            else:
+                NC(3,"Screenshot of currently active window saved as:\n"+Filename,func="MainApp.eventFilter",input=Filename)
+        else:
+            print("Could not save Screenshot: Could not validate save location")
+            NC(1,"Could not save Screenshot: Could not validate save location",func="MainApp.eventFilter",input=self.AGeLibPath)
 
     def _SaveClipboard(self):
         """
@@ -723,7 +726,7 @@ class Main_App(QtWidgets.QApplication):
                         i.AdvancedCB.setChecked(self.advanced_mode)
             self.S_advanced_mode_changed.emit(self.advanced_mode)
         except:
-            NC(1,"Exception while toggling advanced mode",exc=sys.exc_info(),func="Main_App.ToggleAdvancedMode",input="{}: {}".format(str(type(checked)),str(checked)))
+            NC(1,"Exception while toggling advanced mode",exc=sys.exc_info(),func="MainApp.ToggleAdvancedMode",input="{}: {}".format(str(type(checked)),str(checked)))
 
  # ---------------------------------- Colour and Font ----------------------------------
     # CRITICAL: Make a bool with which to force a font and palette change not only on the application level but on every single widget of every window
@@ -762,14 +765,14 @@ class Main_App(QtWidgets.QApplication):
             try:
                 importlib.reload(AGeColour)
             except:
-                NC(2,"Could not reload AGeColour",exc=sys.exc_info(),func="Main_App.Recolour",input=str(Colour))
+                NC(2,"Could not reload AGeColour",exc=sys.exc_info(),func="MainApp.Recolour",input=str(Colour))
             try:
                 spec = importlib.util.spec_from_file_location("CustomColourPalettes", os.path.join(self.AGeLibSettingsPath,"CustomColourPalettes.py"))
                 CustomColours = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(CustomColours)
                 #CustomColours.MyClass()
             except:
-                NC(4,"Could not load custom colours",exc=sys.exc_info(),func="Main_App.Recolour",input=str(Colour))
+                NC(4,"Could not load custom colours",exc=sys.exc_info(),func="MainApp.Recolour",input=str(Colour))
             try:
                 self._Recolour(*AGeColour.Colours[Colour]())
             except:
@@ -778,7 +781,7 @@ class Main_App(QtWidgets.QApplication):
                 except:
                     self._Recolour(*self.AppPalettes[Colour]())
         except:
-            NC(1,"Exception while loading colour palette",exc=sys.exc_info(),func="Main_App.Recolour",input=str(Colour))
+            NC(1,"Exception while loading colour palette",exc=sys.exc_info(),func="MainApp.Recolour",input=str(Colour))
             
     def AddPalette(self, name, palette):
         """
@@ -900,16 +903,16 @@ class Main_App(QtWidgets.QApplication):
                 PointSize = source.TopBar.Font_Size_spinBox.value()
             except common_exceptions:
                 try:
-                    NC(msg="Could not read Font_Size_spinBox.value()",exc=sys.exc_info(),func="Main_App.SetFont",win=source.windowTitle())
+                    NC(msg="Could not read Font_Size_spinBox.value()",exc=sys.exc_info(),func="MainApp.SetFont",win=source.windowTitle())
                 except common_exceptions:
-                    NC(msg="Could not read Font_Size_spinBox.value()",exc=sys.exc_info(),func="Main_App.SetFont")
+                    NC(msg="Could not read Font_Size_spinBox.value()",exc=sys.exc_info(),func="MainApp.SetFont")
                 PointSize = 9
         if type(PointSize) != int:
             print(type(PointSize)," is an invalid type for font size (",PointSize,")")
             try:
-                NC(msg="{} is an invalid type for font size ({})".format(str(type(PointSize)),str(PointSize)),exc=sys.exc_info(),func="Main_App.SetFont",win=source.windowTitle())
+                NC(msg="{} is an invalid type for font size ({})".format(str(type(PointSize)),str(PointSize)),exc=sys.exc_info(),func="MainApp.SetFont",win=source.windowTitle())
             except:
-                NC(msg="{} is an invalid type for font size ({})".format(str(type(PointSize)),str(PointSize)),exc=sys.exc_info(),func="Main_App.SetFont")
+                NC(msg="{} is an invalid type for font size ({})".format(str(type(PointSize)),str(PointSize)),exc=sys.exc_info(),func="MainApp.SetFont")
             PointSize = 9
                 
         for w in self.topLevelWidgets():
@@ -1234,12 +1237,12 @@ class ListWidget(QtWidgets.QListWidget):
 
 # -----------------------------------------------------------------------------------------------------------------
 
-class ATextEdit(QtWidgets.QTextEdit):
+class BaseTextEdit(QtWidgets.QTextEdit):
     """
     The base class for Texteditor of AGeLib. \n
     Includes the signals returnPressed and returnCtrlPressed. \n
     Includes the common behaviour of the arrow key navigation. \n
-    Tab is used to focus the next widget. If you want to use tab as a symbol set ATextEdit``.setTabChangesFocus(False)``.
+    Tab is used to focus the next widget. If you want to use tab as a symbol set BaseTextEdit``.setTabChangesFocus(False)``.
     """
     returnPressed = pyqtSignal()
     returnCtrlPressed = pyqtSignal()
@@ -1270,7 +1273,7 @@ class ATextEdit(QtWidgets.QTextEdit):
                     cursor.movePosition(cursor.End)
                 source.setTextCursor(cursor)
                 return True
-        return super(ATextEdit, self).eventFilter(source, event)
+        return super(BaseTextEdit, self).eventFilter(source, event)
 
     def text(self):
         return self.toPlainText()
@@ -1282,7 +1285,7 @@ class ATextEdit(QtWidgets.QTextEdit):
         except common_exceptions:
             pass
 
-class TextEdit(ATextEdit):
+class TextEdit(BaseTextEdit):
     """
     The base multiline texteditor of AGeLib. \n
     Includes the signals returnPressed and returnCtrlPressed. \n
@@ -1303,7 +1306,7 @@ class TextEdit(ATextEdit):
                 return True
         return super(TextEdit, self).eventFilter(source, event)
 
-class LineEdit(ATextEdit):
+class LineEdit(BaseTextEdit):
     """
     The base single line texteditor of AGeLib. \n
     In contrast to QLineEdit, AGeLib's LineEdit supports QtGui.QSyntaxHighlighter since it is derived from QtWidgets.QTextEdit . \n
@@ -1504,12 +1507,12 @@ class StackedWidget(QtWidgets.QStackedWidget):
 
 # -----------------------------------------------------------------------------------------------------------------
 
-class AButton(QtWidgets.QPushButton):
+class Button(QtWidgets.QPushButton):
     """
     This allows the creation and connection of a button in a single line
     """
     def __init__(self, parent, Text, Action):
-        super(AButton, self).__init__(parent)
+        super(Button, self).__init__(parent)
         self.setText(Text)
         self.clicked.connect(Action)
 
@@ -2333,7 +2336,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
             try:
                 importlib.reload(AGeColour)
             except:
-                NC(2,"Could not reload AGeColour",exc=sys.exc_info(),func="Main_App.Recolour")
+                NC(2,"Could not reload AGeColour",exc=sys.exc_info(),func="MainApp.Recolour")
             try:
                 if QtWidgets.QApplication.instance().AGeLibPathOK:
                     spec = importlib.util.spec_from_file_location("CustomColourPalettes", os.path.join(QtWidgets.QApplication.instance().AGeLibSettingsPath,"CustomColourPalettes.py"))
@@ -2343,7 +2346,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
                 else:
                     raise Exception("AGeLibPath is not OK")
             except:
-                NC(4,"Could not load custom colours",exc=sys.exc_info(),func="Main_App.Recolour")
+                NC(4,"Could not load custom colours",exc=sys.exc_info(),func="MainApp.Recolour")
             try:
                 for i in AGeColour.Colours.keys():
                     ColourList.append(i)
@@ -2352,7 +2355,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
             except:
                 pass
         except:
-            NC(1,"Exception while loading colour palette",exc=sys.exc_info(),func="Main_App.Recolour")
+            NC(1,"Exception while loading colour palette",exc=sys.exc_info(),func="MainApp.Recolour")
         return ColourList
         
     def MakePalette(self):
@@ -2477,7 +2480,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
                     TheDict[n.replace("\\","\\\\").replace("\"","\\\"")] = fn
                     i+=1
             except:
-                NC(2,"Could not load custom colours",exc=sys.exc_info(),func="Main_App.Recolour")
+                NC(2,"Could not load custom colours",exc=sys.exc_info(),func="MainApp.Recolour")
                 msgBox = QtWidgets.QMessageBox(self)
                 msgBox.setText("Could not load previous custom colours!")
                 msgBox.setInformativeText("Do you want to save the colour anyways?\nWARNING: This will overwrite any previous colour palettes!!!")
@@ -2859,7 +2862,7 @@ class AWWF(QtWidgets.QMainWindow): # Astus Window With Frame
         #    QtWidgets.QToolTip.showText(QtGui.QCursor.pos(),source.toolTip(),source)
         return super(AWWF, self).eventFilter(source, event) # let the normal eventFilter handle the event
 
-class TopBar_Widget(QtWidgets.QWidget):
+class TopBar_Widget(QtWidgets.QWidget): # CRITICAL: there should be a flag to merely hide the 3 control buttons in fullscreen instead of hiding top and status bar completely
     def __init__(self, parent=None, DoInit=False, IncludeMenu = False, IncludeFontSpinBox = True, IncludeErrorButton = False, IncludeAdvancedCB = False):
         super(TopBar_Widget, self).__init__(parent)
         self.moving = False
@@ -2900,6 +2903,7 @@ class TopBar_Widget(QtWidgets.QWidget):
         self.CloseButton.installEventFilter(self)
         self.CloseButton.setAutoRaise(True)
         self.CloseButton.setSizePolicy(self.ButtonSizePolicy)
+        self.CloseButton.setFocusPolicy(QtCore.Qt.NoFocus)
 
         self.MaximizeButton = QtWidgets.QToolButton(self)
         self.MaximizeButton.setObjectName("MaximizeButton")
@@ -3891,7 +3895,7 @@ class QuickWindow(AWWF):
     def addWidget(self,widget):
         """
         Adds widget to the bottom of the layout, saves it in a list and returns a reference. \n
-        Example: `self.b = self.addWidget(AButton(self,"Generate Text",self.generateText))`
+        Example: `self.b = self.addWidget(Button(self,"Generate Text",self.generateText))`
         """
         self.WidgetsList.append(widget)
         self.CentralLayout.addWidget(widget)
@@ -3904,7 +3908,7 @@ def QuickSetup(window_class,window_name,app_class=None):
     """
     print(cTimeSStr(),": ",window_name,"Window Startup")
     if app_class==None:
-        app_class = Main_App
+        app_class = MainApp
     app = app_class([])
     #app.setStyle("fusion") #CLEANUP: Already part of the main apps init
     window = window_class()
@@ -3918,10 +3922,10 @@ def QuickSetup(window_class,window_name,app_class=None):
     except:
         sys.exit(app.exec_())
 #endregion
-# ---------------------------------- Rebinds for 3.0 preparations ----------------------------------
-MainApp = Main_App
-Button = AButton
-BaseTextEdit = ATextEdit
+# ---------------------------------- Bindings for Backwards Compatibility ----------------------------------
+Main_App = MainApp
+AButton = Button
+ATextEdit = BaseTextEdit
 
 # TODO: Move this example to its own file and change the docu of the __init__ accordingly
 # ---------------------------------- Main Window ----------------------------------
@@ -3948,7 +3952,7 @@ if __name__ == "__main__":
         print("  --> Using standard mpl LaTeX Display (Install both to use the pretty version)")
         print("  --> Selecting MathJax Display as standard LaTeX display method")
     print("Test Window Startup")
-    app = Main_App([])
+    app = MainApp([])
     app.setStyle("fusion")
     window = _AGe_Test_Window(app)
     app.setMainWindow(window)
