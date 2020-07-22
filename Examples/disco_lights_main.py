@@ -142,8 +142,7 @@ class BaseClass(ape.APEPandaBase):
         self.spotlight = self.camera.attachNewNode(p3dc.Spotlight("spotlight"))
         self.spotlight.node().setColor((.45, .45, .45, 1))
         self.spotlight.node().setSpecularColor((0, 0, 0, 1))
-        # The cone of a spotlight is controlled by it's lens. This creates the
-        # lens
+        # The cone of a spotlight is controlled by it's lens. This creates the lens
         self.spotlight.node().setLens(p3dc.PerspectiveLens())
         # This sets the Field of View (fov) of the lens, in degrees for width
         # and height.  The lower the numbers, the tighter the spotlight.
@@ -268,6 +267,9 @@ class BaseClass(ape.APEPandaBase):
     def togglePerPixelLighting(self):
         if self.perPixelEnabled:
             self.perPixelEnabled = False
+            if self.shadowsEnabled:
+                self.shadowsEnabled = False
+                self.directionalLight.node().setShadowCaster(False)
             self.render.clearShader()
         else:
             self.perPixelEnabled = True
