@@ -3,6 +3,8 @@
 #
 # Last Updated: 2020-07-21
 
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Shadows-Basic-Example"
@@ -241,4 +243,4 @@ class World(DirectObject):
                ape.base().win.getGsg().getSupportsShadowFilter()
 
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)

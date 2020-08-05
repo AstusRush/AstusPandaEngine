@@ -10,6 +10,8 @@
 # and points straight into the scene, and see what it collides with. We pick
 # the object with the closest collision
 
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Chessboard-Example"
@@ -329,7 +331,7 @@ class Rook(Piece):
 #endregion piece classes
     
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)
 
 
 

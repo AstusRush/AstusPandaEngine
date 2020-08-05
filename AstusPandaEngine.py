@@ -24,6 +24,7 @@ except:
 
 
 import sys
+import os
 
 P3D_WIN_WIDTH = 400
 P3D_WIN_HEIGHT = 240
@@ -47,7 +48,8 @@ def window():
 
 #region Engine Classes
 class APE():
-    def __init__(self, base):
+    def __init__(self, base, tobsprRenderPipeline):
+        self.RenderPipelineActive = tobsprRenderPipeline
         self.base = base
         age.App().engine = self
 
@@ -59,9 +61,9 @@ class APE():
         pass
 
 class APEApp(age.MainApp):
-    def __init__(self, base, args = []):
+    def __init__(self, args = []):
         super(APEApp, self).__init__(args)
-        self.base = base
+        self.base = None #base
         self.engine = None
         self.installEventFilter(self)
 
@@ -72,10 +74,9 @@ class APEApp(age.MainApp):
         except: pass
         return super(APEApp, self).eventFilter(source, event) # let the normal eventFilter handle the event
 
-    def init(self, base, engine, window):
+    def init(self, base, engine):
         self.base = base
         self.engine = engine
-        self.setMainWindow(window)
 
 class APEWindow(age.AWWF):
     S_PandaKeystroke  = pyqtSignal(str)
@@ -132,8 +133,9 @@ class PandaWidget(QtWidgets.QWidget):
         return QtCore.QSize(400,300)
 
 class APEPandaBase(ShowBase):
-    def __init__(self):
+    def __init__(self,rp):
         ShowBase.__init__(self)
+        self.render_pipeline = rp
 
     def keystrokeSignal(self, keyname):
         self.MainWindow.S_PandaKeystroke.emit(keyname)
@@ -228,18 +230,35 @@ class APEPandaBase(ShowBase):
 
 #region Main Functions
 
-def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, window = APEWindow, widget = PandaWidget, start = True):
+def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, window = APEWindow, widget = PandaWidget, start = True, tobsprRenderPipeline = True):
     print(age.cTimeSStr(),": ",name,"Window Startup")
-    p3dc.loadPrcFileData("", "window-type none")
-    _base = base()
-    _app = app(_base, sys.argv)
+    _app = app(sys.argv)
     _app.ModuleVersions += f"\nAstus Panda Engine {Version}\nPanda3D {p3d.__version__}"
-    _engine = engine(_base)
+    UseRenderPipeline = QtWidgets.QMessageBox.question(None,"Render Pipeline","Do You want to use tobspr's Render Pipeline?\nThis will make everything look pretty at the cost of performance.") == QtWidgets.QMessageBox.Yes
+    if UseRenderPipeline:
+        # Insert the pipeline path to the system path, this is required to be
+        # able to import the pipeline classes. In case you placed the render
+        # pipeline in a subfolder of your project, you have to adjust this.
+        sys.path.insert(0, "../tobsprRenderPipeline")
+        sys.path.insert(0, "tobsprRenderPipeline")
+        # Import render pipeline classes
+        from tobsprRenderPipeline.rpcore import RenderPipeline
+        # Construct and create the pipeline
+        render_pipeline = RenderPipeline()
+        render_pipeline.pre_showbase_init()
+    else:
+        render_pipeline = False
+    p3dc.loadPrcFileData("", "window-type none")
+    _base = base(render_pipeline)
+    _engine = engine(_base, render_pipeline)
+    _app.init(_base,_engine)
     _window = window(widget)
     _app.setMainWindow(_window)
     _window.setWindowTitle(name)
     _app.setApplicationName(name+"-App")
     _base.registerWindow(_window)
+    if UseRenderPipeline:
+        render_pipeline.create(_base)
     # this basically creates an idle task
     timer =  QtCore.QTimer(_window)
     timer.timeout.connect( _base.step )

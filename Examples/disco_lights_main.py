@@ -8,6 +8,9 @@
 # This project demonstrates how to use various types of
 # lighting
 #
+
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Disco-Lights-Example"
@@ -355,4 +358,4 @@ class BaseClass(ape.APEPandaBase):
 
 
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)

@@ -17,6 +17,8 @@
 #MAYBE: add 1st/3rd Person movement?
 #MAYBE: add toggleable chess movement rules?
 
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Chessboard-Advanced-Example"
@@ -176,6 +178,7 @@ class ChessScene(ape.APEScene):
         base().accept("space", self.toggleCam)  # releasing places it
         base().accept("l", self.togglePerPixelLighting)
         base().accept("e", self.toggleShadows)
+        self.makeForrest()
 
     # Builds the onscreen instruction labels
     def updateStatusLabel(self):
@@ -327,9 +330,8 @@ class ChessScene(ape.APEScene):
         # Shadows
         self.light = p3dc.Spotlight("Spot")
         self.light_node = render().attachNewNode(self.light) # generates instance of p3dc.NodePath
-        print("self.light_node",type(self.light_node))
         self.light.setScene(render())
-        self.light.setShadowCaster(True, 1024, 1024)#.setShadowCaster(True)
+        self.light.setShadowCaster(True, 1024*4, 1024*4)#.setShadowCaster(True)
         #self.light.showFrustum()
         # This exponent value sets how soft the edge of the spotlight is.
         # 0 means a hard edge. 128 means a very soft edge.
@@ -344,13 +346,14 @@ class ChessScene(ape.APEScene):
         # and height.  The lower the numbers, the tighter the spotlight.
         self.light.getLens().setFov(40, 40)
         #self.light.getLens().setFov(40)
-        self.light.getLens().setNearFar(0.5, 50)
+        self.light.getLens().setNearFar(0.5, 500)
         self.light.setColor((0.6, 0.6, 0.8, 1))
         ############################################################
         ####\/########\/########\/########\/########\/########\/####
         #self.light_node.setPosHpr(0, -10, 15, 0, -50, 0) #This does not light the tiles... (similar to https://discourse.panda3d.org/t/shadows-with-directional-light-source-strange-behaviour/10025 )
-        self.light_node.setPosHpr(0, 10, 15, 180, -50, 0) #This works as intended
+        #self.light_node.setPosHpr(0, 10, 15, 180, -50, 0) #This works as intended
         #self.light_node.setPosHpr(0, 0, 8, 0, -80, 0) #This lights half the tiles but I don't know why this works to a degree but the first one doesn't at all
+        self.light_node.setPosHpr(0, 8, 12, 180, -50, 0) #This is now used
         ####/\########/\########/\########/\########/\########/\####
         ############################################################
         render().setLight(self.light_node)
@@ -359,7 +362,6 @@ class ChessScene(ape.APEScene):
         #
         #self.light2 = p3dc.Spotlight("Spot")
         #self.light2_node = render().attachNewNode(self.light2) # generates instance of p3dc.NodePath
-        #print("self.light_node",type(self.light2_node))
         #self.light2.setScene(render())
         #self.light2.setShadowCaster(True, 1024, 1024)#.setShadowCaster(True)
         ##self.light.showFrustum()
@@ -381,12 +383,53 @@ class ChessScene(ape.APEScene):
         #self.light2_node.setPosHpr(0, -10, 15, 0, -50, 0)
         #render().setLight(self.light2_node)
 
-        #self.alight = render().attachNewNode(p3dc.AmbientLight("Ambient"))
-        #self.alight.node().setColor(p3dc.LVector4(0.1, 0.1, 0.1, 1))
-        #render().setLight(self.alight)
+        self.alight = render().attachNewNode(p3dc.AmbientLight("Ambient"))
+        self.alight.node().setColor(p3dc.LVector4(0.1, 0.1, 0.1, 1))
+        render().setLight(self.alight)
 
         # Important! Enable the shader generator.
         render().setShaderAuto()
+
+    def makeForrest(self):
+        self.forest = p3dc.NodePath(p3dc.PandaNode("Forest Root"))
+        self.forest.reparentTo(render())
+        #self.forest.hide(p3dc.BitMask32(self.lightMask | self.plainMask))
+        loader().loadModel([
+            "fireflies_models/background",
+            "fireflies_models/foliage01",
+            "fireflies_models/foliage02",
+            "fireflies_models/foliage03",
+            "fireflies_models/foliage04",
+            "fireflies_models/foliage05",
+            "fireflies_models/foliage06",
+            "fireflies_models/foliage07",
+            "fireflies_models/foliage08",
+            "fireflies_models/foliage09"],
+            callback=self.finishLoadingForrest)
+
+    def finishLoadingForrest(self, models):
+        # This function is used as callback to loader.loadModel, and called
+        # when all of the models have finished loading.
+
+        # Attach the models to the scene graph.
+        minLimit, maxLimit = models[0].getTightBounds()
+        dimensions = p3dc.Point3(maxLimit - minLimit)
+        compList = [dimensions.getX(), dimensions.getY(), dimensions.getZ()]
+        for model in models:
+            model.reparentTo(self.forest)
+            model.setPos(model.getPos()[0],model.getPos()[1],model.getPos()[2]-1)
+            model.setScale(1 / max(compList)*150)
+            #model.setScale()
+            #print(type(model.node()))
+        #p3dc.NodePath.
+        #p3dc.ModelRoot.
+        # self.setFireflySize(25.0)
+        # while len(self.fireflies) < 5:
+        #     self.addFirefly()
+        # self.updateReadout()
+        # 
+        # self.nextadd = 0
+        # self.taskMgr.add(self.spawnTask, "spawner")
 
 class EngineClass(ape.APE):
     def start(self):
@@ -465,7 +508,7 @@ class Rook(Piece):
 #endregion piece classes
     
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)
 
 
 

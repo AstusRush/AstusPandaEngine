@@ -3,6 +3,8 @@
 #
 # Last Updated: 2020-07-21
 
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Shadows-Advanced-Example"
@@ -299,4 +301,4 @@ class World(DirectObject):
         ape.render().setShaderInput('push', self.pushBias)
 
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)

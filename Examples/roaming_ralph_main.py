@@ -10,6 +10,9 @@
 # and having it walk around on uneven terrain, as well
 # as implementing a fully rotatable camera.
 #
+
+SupportsRenderPipeline = False
+
 import datetime
 import platform
 WindowTitle = "APE-Roaming-Ralph-Example"
@@ -313,4 +316,4 @@ class BaseClass(ape.APEPandaBase):
 
 
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)

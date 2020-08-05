@@ -38,6 +38,8 @@ import sys
 import AstusPandaEngine as ape
 from AstusPandaEngine import base, window, engine
 
+SupportsRenderPipeline = False
+
 class scene(ape.APEScene):
     def start(self):
         #self.loader
@@ -69,4 +71,4 @@ class BaseClass(ape.APEPandaBase):
         
     
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True)
+    ape.start(WindowTitle,EngineClass,BaseClass,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)
