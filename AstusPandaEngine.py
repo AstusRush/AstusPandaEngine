@@ -2,8 +2,7 @@
 Version = "developer preview"
 version = Version
 
-import AGeLib as age
-from AGeLib import NC
+from AGeLib import *
 
 import panda3d as p3d
 import panda3d.core as p3dc
@@ -11,47 +10,62 @@ from direct.showbase.ShowBase import ShowBase
 
 from direct.showbase.MessengerGlobal import messenger
 
+
 #import direct.directbase.DirectStart #This import does not import anything but instead starts a ShowBase instance
 from direct.showbase.DirectObject import DirectObject
 #from pandac.PandaModules import WindowProperties
 
-from PyQt5.QtCore import pyqtProperty, pyqtSignal # pylint: disable=no-name-in-module
-from PyQt5 import QtWidgets,QtCore,QtGui,Qt
-try:
-    from PyQt5.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings # pylint: disable=no-name-in-module
-except:
-    from PyQtWebEngine.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings
-
 
 import sys
 import os
+import typing
+import random
+
+import numpy as np
+
+import _APE_WrapperClasses as Classes
 
 P3D_WIN_WIDTH = 400
 P3D_WIN_HEIGHT = 240
 
 #region shortcut functions
 def engine():
-    return age.App().engine
+    return App().engine
 
 def base():
-    return age.App().base
+    return App().base
     
 def render():
-    return age.App().base.render
+    return App().base.render
     
 def loader():
-    return age.App().base.loader
+    return App().base.loader
 
 def window():
-    return age.App().MainWindow
+    return App().MainWindow
+
+def lightManager():
+    return App().lightManager
+
+def pipelineActive():
+    return App().RenderPipelineActive
 #endregion shortcut functions
+
+#region helper functions
+def colour(colour: QtGui.QColor) -> typing.Tuple[float,float,float,float]:
+    if isinstance(colour, QtGui.QBrush): colour = colour.color()
+    try:
+        return (colour.redF(), colour.greenF(), colour.blueF(), colour.alphaF())
+    except:
+        return colour
+#endregion helper functions
 
 #region Engine Classes
 class APE():
     def __init__(self, base, tobsprRenderPipeline):
         self.RenderPipelineActive = tobsprRenderPipeline
         self.base = base
-        age.App().engine = self
+        App().engine = self
 
     def start(self):
         """
@@ -60,11 +74,13 @@ class APE():
         """
         pass
 
-class APEApp(age.MainApp):
-    def __init__(self, args = []):
-        super(APEApp, self).__init__(args)
+class APEApp(AGeApp):
+    def __init__(self, args = [], useExcepthook = True):
+        super(APEApp, self).__init__(args,useExcepthook)
         self.base = None #base
         self.engine = None
+        self.RenderPipelineActive = False
+        self.lightManager = None
         self.installEventFilter(self)
 
     def eventFilter(self, source, event):
@@ -74,11 +90,15 @@ class APEApp(age.MainApp):
         except: pass
         return super(APEApp, self).eventFilter(source, event) # let the normal eventFilter handle the event
 
-    def init(self, base, engine):
+    def init_1(self, tobsprRenderPipeline):
+        self.RenderPipelineActive = tobsprRenderPipeline
+        self.lightManager = Classes._lightManager()
+
+    def init_2(self, base, engine):
         self.base = base
         self.engine = engine
 
-class APEWindow(age.AWWF):
+class APEWindow(AWWF):
     S_PandaKeystroke  = pyqtSignal(str)
     S_PandaButtonDown = pyqtSignal(str)
     S_PandaButtonUp   = pyqtSignal(str)
@@ -104,7 +124,7 @@ class APEWindow(age.AWWF):
         layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.pandaContainer)
         
-        self.lineedit = age.LineEdit(self, PlaceholderText = "Write something and press return to generate a Notification")
+        self.lineedit = AGeWidgets.LineEdit(self, PlaceholderText = "Write something and press return to generate a Notification")
         def sendMessage():
             NC(3,self.lineedit.text(),DplStr="LineEdit Input")
             self.lineedit.clear()
@@ -120,13 +140,13 @@ class PandaWidget(QtWidgets.QWidget):
 
     def resizeEvent(self, evt):
         wp = p3dc.WindowProperties()
-        wp.setSize(self.width(), self.height())
+        wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
         wp.setOrigin(0,0)
         base().win.requestProperties(wp)
 
     def moveEvent(self, evt):
         wp = p3dc.WindowProperties()
-        wp.setSize(self.width(), self.height())
+        wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
         base().win.requestProperties(wp)
 	
     def minimumSizeHint(self):
@@ -146,8 +166,8 @@ class APEPandaBase(ShowBase):
     
     def registerWindow(self,window):
         self.MainWindow = window
-        self.accept("f11", self.MainWindow.toggleFullscreen)
-        self.accept("f12", lambda: age.App().MakeScreenshot(self.MainWindow))
+        self.accept("f11", lambda: self.MainWindow.toggleFullscreen())
+        self.accept("f12", lambda: App().makeScreenshot(self.MainWindow))
         wp = p3dc.WindowProperties()
         wp.setOrigin(0,0)
         wp.setSize(P3D_WIN_WIDTH, P3D_WIN_HEIGHT)
@@ -231,7 +251,20 @@ class APEPandaBase(ShowBase):
 #region Main Functions
 
 def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, window = APEWindow, widget = PandaWidget, start = True, tobsprRenderPipeline = True):
-    print(age.cTimeSStr(),": ",name,"Window Startup")
+    """
+    Starts the application using the supplied base classes. If a class is not supplied a standard class is used. \n
+    `name`: str -  The name of the application. \n
+    `engine`: APE - The Engine class derived from APE. \n
+    `base`: APEPandaBase - The Base class derived from APEPandaBase. \n
+    `app`: APEApp - The App class derived from APEApp. \n
+    `window`: APEWindow - The Window class derived from APEWindow. \n
+    `widget`: PandaWidget - The Widget class for the panda3D display derived from PandaWidget. \n
+    `start`: bool - If `True` engine.start() is called. Set this to `False` if you want to start the engine later. \n
+    `tobsprRenderPipeline`: bool - Set this to `False` if your application is not compatible with tobspr's Render Pipeline. If `True` the user will be asked if they want to use it. \n
+    \n
+    You do not need to use this function to start your application but it is highly recommended.
+    """
+    print(AGeAux.cTimeSStr(),": ",name,"Application Startup")
     _app = app(sys.argv)
     _app.ModuleVersions += f"\nAstus Panda Engine {Version}\nPanda3D {p3d.__version__}"
     UseRenderPipeline = QtWidgets.QMessageBox.question(None,"Render Pipeline","Do You want to use tobspr's Render Pipeline?\nThis will make everything look pretty at the cost of performance.") == QtWidgets.QMessageBox.Yes
@@ -242,16 +275,19 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
         sys.path.insert(0, "../tobsprRenderPipeline")
         sys.path.insert(0, "tobsprRenderPipeline")
         # Import render pipeline classes
-        from tobsprRenderPipeline.rpcore import RenderPipeline
+        from tobsprRenderPipeline import rpcore
         # Construct and create the pipeline
-        render_pipeline = RenderPipeline()
+        render_pipeline = rpcore.RenderPipeline()
         render_pipeline.pre_showbase_init()
+        Classes._PipelineImport()
     else:
         render_pipeline = False
+    _app.init_1(UseRenderPipeline)
     p3dc.loadPrcFileData("", "window-type none")
     _base = base(render_pipeline)
     _engine = engine(_base, render_pipeline)
-    _app.init(_base,_engine)
+    _app.init_2(_base,_engine)
+    print(AGeAux.cTimeSStr(),": ",name,"Window Startup")
     _window = window(widget)
     _app.setMainWindow(_window)
     _window.setWindowTitle(name)
@@ -264,9 +300,11 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
     timer.timeout.connect( _base.step )
     timer.start(0)
     #
-    print(age.cTimeSStr(),": ",name,"Window Started\n")
-    _window.show()
-    _window.positionReset()
+    print(AGeAux.cTimeSStr(),": ",name,"Window Started\n")
+    if hasattr(_window,"LastOpenState"):
+        _window.LastOpenState()
+    else:
+        _window.show()
     if start:
         _engine.start()
     _base.buttonThrowers[0].node().setKeystrokeEvent('keystroke')
@@ -295,3 +333,74 @@ class APEObject():
 
 #endregion Main Classes
 
+
+#region Laboratory window
+
+class APELabWindow(AWWF):
+    S_PandaKeystroke  = pyqtSignal(str)
+    S_PandaButtonDown = pyqtSignal(str)
+    S_PandaButtonUp   = pyqtSignal(str)
+    def __init__(self,widget = PandaWidget):
+        super(APELabWindow, self).__init__(IncludeErrorButton=True, FullscreenHidesBars=True)
+        App().setMainWindow(self)
+        self.LastOpenState = self.showMaximized
+        self.CentralSplitter = QtWidgets.QSplitter(self)
+        self.setCentralWidget(self.CentralSplitter)
+        
+        self.TabWidget = QtWidgets.QTabWidget(self.CentralSplitter)
+        #
+        self.cw = QtWidgets.QWidget(self.CentralSplitter)
+        self.pandaContainer = widget(self.cw)
+        self.pandaContainer.installEventFilter(self)
+        
+        self.Console1 = AGeIDE.ConsoleWidget(self)
+        self.Console1.setGlobals(self.globals())
+        #self.Console1.setText("self.genPlayer()\nself.HexGrid = AGE.HexGrid(self.AGE)\n")
+        self.TabWidget.addTab(self.Console1, "Con1")
+        self.Console2 = AGeIDE.ConsoleWidget(self)
+        self.Console2.setGlobals(self.globals())
+        #self.Console2.setText("self.genFloorAndPlayer()\n")
+        self.TabWidget.addTab(self.Console2, "Con2")
+        #self.GeneratorEditor = AGeIDE.OverloadWidget(self, self.gen, "gen")
+        #self.TabWidget.addTab(self.GeneratorEditor, "Gen")
+        self.Overload1 = AGeIDE.OverloadWidget(self)
+        self.Overload1.setGlobals(self.globals())
+        self.TabWidget.addTab(self.Overload1, "Overload 1")
+        self.Overload2 = AGeIDE.OverloadWidget(self)
+        self.Overload2.setGlobals(self.globals())
+        self.TabWidget.addTab(self.Overload2, "Overload 2")
+        self.Inspect = AGeIDE.InspectWidget(self)
+        self.Inspect.setGlobals(self.globals())
+        self.TabWidget.addTab(self.Inspect, "Inspect")
+        
+        self.setupUI()
+        
+        self.CentralSplitter.setSizes([App().primaryScreen().size().width(),App().primaryScreen().size().width()])
+
+    def setupUI(self):
+        """
+        This Method sets up the UI. \n
+        If you want a different layout reimplement this Method. \n
+        All you need to do is to create a layout and apply it to `self.cw`.\n
+        `self.cw` is automatically set as the Central Widget. \n
+        `self.pandaContainer` is the Panda3D Widget and is created automatically.
+        """
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
+        layout.addWidget(self.pandaContainer)
+        
+        self.cw.setLayout(layout)
+        
+    def eventFilter(self, source, event):
+        #if event.type() == 6: # QtCore.QEvent.KeyPress
+        #if hasattr(self,"AGE"):
+        #    self.AGE.eventFilter(source, event)
+        return super().eventFilter(source, event) # let the normal eventFilter handle the event
+
+    def globals(self):
+        return vars(sys.modules['__main__'])
+
+    def gen(self):
+        pass
+
+#endregion Laboratory window

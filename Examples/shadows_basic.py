@@ -75,8 +75,8 @@ class scene(ape.APEScene):
 
 class EngineClass(ape.APE):
     def start(self):
-        self.scene = scene()
-        self.scene.start()
+        self.Scene = scene()
+        self.Scene.start()
 
 class AppClass(ape.APEApp):
     pass

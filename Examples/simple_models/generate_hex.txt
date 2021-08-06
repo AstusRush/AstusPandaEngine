@@ -1,0 +1,17 @@
+# This code is intended to be used in AGeLib console
+def pointy_hex_corner(center, size, i):
+	import numpy as np
+	angle_deg = 60 * i - 30
+	angle_rad = np.pi / 180 * angle_deg
+	ret = (center + size * np.cos(angle_rad),
+           center + size * np.sin(angle_rad),
+		   0)
+	return "{:0.4f}".format(ret)
+display()
+for i in range(0,6):
+	r = pointy_hex_corner(0,1,i)
+	#rn = pointy_hex_corner(0,1,i+1)
+	dpl(r[0],r[1],0,end="") # x y z
+	#dpl(rn[0],rn[1],0,end="") # x y z
+	#dpl(r[0],r[1],0,end="") # x y z
+	dpl()

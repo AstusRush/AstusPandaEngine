@@ -196,8 +196,8 @@ class RoamingRalphDemo(ShowBase):
         self.ralphGroundRay.setDirection(0,0,-1)
         self.ralphGroundCol = CollisionNode('ralphRay')
         self.ralphGroundCol.addSolid(self.ralphGroundRay)
-        self.ralphGroundCol.setFromCollideMask(BitMask32.bit(0))
-        self.ralphGroundCol.setIntoCollideMask(BitMask32.allOff())
+        self.ralphGroundCol.setFromCollideMask(CollideMask.bit(0))
+        self.ralphGroundCol.setIntoCollideMask(CollideMask.allOff())
         self.ralphGroundColNp = self.ralph.attachNewNode(self.ralphGroundCol)
         self.ralphGroundHandler = CollisionHandlerQueue()
         self.cTrav.addCollider(self.ralphGroundColNp, self.ralphGroundHandler)
@@ -207,8 +207,8 @@ class RoamingRalphDemo(ShowBase):
         self.camGroundRay.setDirection(0,0,-1)
         self.camGroundCol = CollisionNode('camRay')
         self.camGroundCol.addSolid(self.camGroundRay)
-        self.camGroundCol.setFromCollideMask(BitMask32.bit(0))
-        self.camGroundCol.setIntoCollideMask(BitMask32.allOff())
+        self.camGroundCol.setFromCollideMask(CollideMask.bit(0))
+        self.camGroundCol.setIntoCollideMask(CollideMask.allOff())
         self.camGroundColNp = base.camera.attachNewNode(self.camGroundCol)
         self.camGroundHandler = CollisionHandlerQueue()
         self.cTrav.addCollider(self.camGroundColNp, self.camGroundHandler)
@@ -298,9 +298,11 @@ class RoamingRalphDemo(ShowBase):
             base.camera.setPos(base.camera.getPos() - camvec*(5-camdist))
             camdist = 5.0
 
-        # Now check for collisions.
-
-        self.cTrav.traverse(render)
+        
+        # Normally, we would have to call traverse() to check for collisions.
+        # However, the class ShowBase that we inherit from has a task to do
+        # this for us, if we assign a p3dc.CollisionTraverser to self.cTrav.
+        #self.cTrav.traverse(render)
 
         # Adjust ralph's Z coordinate.  If ralph's ray hit terrain,
         # update his Z. If it hit anything else, or didn't hit anything, put

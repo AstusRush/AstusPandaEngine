@@ -1,27 +1,17 @@
 """
 
-Roaming Ralph Sample (modified)
+Roaming Ralph Sample Remastered
 
-This is the default roaming ralph sample, with the ape.render() pipeline and APE.
-Using the ape.render() pipeline and is only the matter of a few lines.
-
-NOTICE: Since this is a straight copy of the standard roaming ralph sample,
-        this attempts to keep as close to the original code to make it easier
-        to see where to load the ape.render() pipeline.
-
-        If you find a bug/suggestion in this code that is not related to APE then you should report
-        that to the sample included in Panda3D and not this code.
-
-        (and yeah, this code could surely be written in a much nicer way)
+WIP
 
 """
 
 # The Pipeline Can be toggled on/off with this
-UsePipeline = True
+SupportsRenderPipeline = True
 
 import datetime
 import platform
-WindowTitle = "APE-Roaming-Ralph-Pipeline-Example"
+WindowTitle = "APE Roaming-Ralph Remastered"
 if __name__ == "__main__":
     print()
     print(datetime.datetime.now().strftime('%H:%M:%S'))
@@ -85,17 +75,20 @@ class PandaWidget(ape.PandaWidget):
 class RoamingRalphDemo(ape.APEPandaBase):
     def start(self):
 
-        # Set time of day
-        if self.render_pipeline: self.render_pipeline.daytime_mgr.time = "7:40"
+        if self.render_pipeline:
+            # Set time of day
+            self.render_pipeline.daytime_mgr.time = "7:40"
 
-        # Use a special effect for rendering the scene, this is because the
-        # roaming ralph model has no normals or valid materials
-        if self.render_pipeline: self.render_pipeline.set_effect(ape.render(), "roaming_ralph_pipeline_scene-effect.yaml", {}, sort=250)
+            # Use a special effect for rendering the scene, this is because the
+            # roaming ralph model has no normals or valid materials
+            self.render_pipeline.set_effect(ape.render(), "_pipeline_effect-texture.yaml", {}, sort=250)
 
         self.keyMap = {"left":0, "right":0, "forward":0, "backward":0, "cam-left":0, "cam-right":0}
         self.speed = 1.0
         ape.base().win.setClearColor(p3dc.Vec4(0,0,0,1))
-
+        
+        self.collisionVisible = False
+        
         # Post the instructions
         
         self.inst4 = addInstructions(0.90, "[W]  Run Ralph Forward")
@@ -104,7 +97,8 @@ class RoamingRalphDemo(ape.APEPandaBase):
         self.inst3 = addInstructions(0.75, "[D]  Rotate Ralph Right")
         self.inst6 = addInstructions(0.70, "[Left Arrow]  Rotate Camera Left")
         self.inst7 = addInstructions(0.65, "[Right Arrow]  Rotate Camera Right")
-
+        self.inst7 = addInstructions(0.95, "[C]  Toggle Collision Visibility")
+        
         # Set up the environment
         #
         # This environment model contains collision meshes.  If you look
@@ -116,12 +110,13 @@ class RoamingRalphDemo(ape.APEPandaBase):
         # mesh -- a mesh which is optimized for collision, not rendering.
         # It also keeps the original mesh, so there are now two copies ---
         # one optimized for rendering, one for collisions.
-
-        self.environ = ape.loader().loadModel("roaming_ralph_pipeline_resources/world")
+        
+        #self.environ = ape.loader().loadModel("roaming_ralph_pipeline_resources/world")
+        self.environ = ape.loader().loadModel("roaming_ralph_models/world")
         self.environ.reparentTo(ape.render())
         self.environ.setPos(0,0,0)
-
-
+        
+        
         # Remove wall nodes
         self.environ.find("**/wall").remove_node()
 
@@ -157,6 +152,8 @@ class RoamingRalphDemo(ape.APEPandaBase):
         self.accept("=", self.adjustSpeed, [0.25])
         self.accept("+", self.adjustSpeed, [0.25])
         self.accept("-", self.adjustSpeed, [-0.25])
+        self.accept("c", self.toggleCollisionVisibility)
+        self.accept("3",self.resetPos)
 
         ape.base().taskMgr.add(self.move,"moveTask")
 
@@ -199,14 +196,6 @@ class RoamingRalphDemo(ape.APEPandaBase):
         self.camGroundHandler = p3dc.CollisionHandlerQueue()
         self.cTrav.addCollider(self.camGroundColNp, self.camGroundHandler)
 
-        # Uncomment this line to see the collision rays
-        #self.ralphGroundColNp.show()
-        #self.camGroundColNp.show()
-
-        # Uncomment this line to show a visual representation of the
-        # collisions occuring
-        #self.cTrav.showCollisions(ape.render())
-
         # Create some lighting
         ambientLight = p3dc.AmbientLight("ambientLight")
         ambientLight.setColor(p3dc.Vec4(.3, .3, .3, 1))
@@ -226,6 +215,47 @@ class RoamingRalphDemo(ape.APEPandaBase):
         newSpeed = self.speed + delta
         if 0 <= newSpeed <= 3:
           self.speed = newSpeed
+
+    def toggleCollisionVisibility(self):
+        if not self.collisionVisible:
+            self.collisionVisible = True
+            # Show the collision rays
+            self.ralphGroundColNp.show()
+            self.camGroundColNp.show()
+
+            # Show a visual representation of the collisions occurring
+            self.cTrav.showCollisions(ape.render())
+        else:
+            self.collisionVisible = False
+            # Hide the collision rays
+            self.ralphGroundColNp.hide()
+            self.camGroundColNp.hide()
+
+            # Hide the visual representation of the collisions occurring
+            self.cTrav.hideCollisions()
+
+    def resetPos(self):
+        self.ralph.setPos(p3dc.Vec3(-110.9, 29.4, 1.8))
+
+        # Keep the camera at one foot above the terrain,
+        # or two feet above ralph, whichever is greater.
+
+        entries = []
+        for i in range(self.camGroundHandler.getNumEntries()):
+            entry = self.camGroundHandler.getEntry(i)
+            entries.append(entry)
+        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+            ape.base().camera.setZ(entries[0].getSurfacePoint(ape.render()).getZ()+1.0)
+        if (ape.base().camera.getZ() < self.ralph.getZ() + 2.0):
+            ape.base().camera.setZ(self.ralph.getZ() + 2.0)
+
+        # The camera should look in ralph's direction,
+        # but it should also try to stay horizontal, so look at
+        # a floater which hovers above ralph's head.
+
+        self.floater.setPos(self.ralph.getPos())
+        self.floater.setZ(self.ralph.getZ() + 2.0)
+        ape.base().camera.lookAt(self.floater)
 
     # Accepts arrow keys to move either the player or the menu cursor,
     # Also deals with grid checking and collision detection
@@ -259,8 +289,9 @@ class RoamingRalphDemo(ape.APEPandaBase):
         # If ralph is moving, loop the run animation.
         # If he is standing still, stop the animation.
 
-        if (self.keyMap["forward"]!=0) or (self.keyMap["backward"]!=0) or \
-           (self.keyMap["left"]!=0) or (self.keyMap["right"]!=0):
+        #if (self.keyMap["forward"]!=0) or (self.keyMap["backward"]!=0) or \
+        #   (self.keyMap["left"]!=0) or (self.keyMap["right"]!=0):
+        if self.keyMap["forward"] or self.keyMap["backward"] or self.keyMap["left"] or self.keyMap["right"]:
             if self.isMoving is False:
                 self.ralph.loop("run")
                 self.isMoving = True
@@ -288,17 +319,26 @@ class RoamingRalphDemo(ape.APEPandaBase):
         # Normally, we would have to call traverse() to check for collisions.
         # However, the class ShowBase that we inherit from has a task to do
         # this for us, if we assign a p3dc.CollisionTraverser to self.cTrav.
-        #self.cTrav.traverse(render)
+        # 
+        # NOTE: This line must be here to avoid getting stuck:
+        # Without the following line Ralph often gets stuck INSIDE objects without a way to escape.
+        # With this line ralph can run through most trees but still collides with rocks.
+        #   But more importantly ralph no longer gets stuck inside objects and a little phasing if to be preferred over getting stuck.
+        self.cTrav.traverse(ape.render())
 
         # Adjust ralph's Z coordinate.  If ralph's ray hit terrain,
         # update his Z. If it hit anything else, or didn't hit anything, put
         # him back where he was last frame.
 
-        entries = []
-        for i in range(self.ralphGroundHandler.getNumEntries()):
-            entry = self.ralphGroundHandler.getEntry(i)
-            entries.append(entry)
-        if (len(entries)>0) and (entries[0].getIntoNode().getName() == "terrain"):
+        #entries = []
+        #for i in range(self.ralphGroundHandler.getNumEntries()):
+        #    entry = self.ralphGroundHandler.getEntry(i)
+        #    entries.append(entry)
+            
+        entries = list(self.ralphGroundHandler.getEntries())
+        entries.sort(key=lambda x: x.getSurfacePoint(self.render).getZ())
+
+        if len(entries) > 0 and entries[0].getIntoNode().getName() == "terrain":
             self.ralph.setZ(entries[0].getSurfacePoint(ape.render()).getZ())
         else:
             self.ralph.setPos(startpos)
@@ -329,4 +369,4 @@ class RoamingRalphDemo(ape.APEPandaBase):
 
 
 if __name__ == '__main__':
-    ape.start(WindowTitle,EngineClass,RoamingRalphDemo,AppClass,MainWindowClass,PandaWidget,True,UsePipeline)
+    ape.start(WindowTitle,EngineClass,RoamingRalphDemo,AppClass,MainWindowClass,PandaWidget,True,SupportsRenderPipeline)

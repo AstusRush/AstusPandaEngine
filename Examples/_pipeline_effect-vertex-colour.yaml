@@ -1,0 +1,20 @@
+
+# Special effect file for rendering scenes that use vertex colours
+
+vertex:
+    inout: |
+        in vec4 p3d_Color;
+        out vec4 m_color;
+    transform: |
+        m_color = p3d_Color;
+fragment:
+    inout: |
+        in vec4 m_color;
+    material: |
+        m.shading_model = SHADING_MODEL_DEFAULT;
+        m.basecolor = m_color.xyz * texture(p3d_Texture0, texcoord).xyz;
+        m.roughness = 0.9;
+        m.specular_ior = 1.51;
+        m.metallic = 10;
+        m.normal = vOutput.normal;
+        m.shading_model_param0 = 0.0; // unused

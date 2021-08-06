@@ -434,8 +434,8 @@ class ChessScene(ape.APEScene):
 class EngineClass(ape.APE):
     def start(self):
         self.base.start()
-        self.scene = ChessScene()
-        self.scene.start()
+        self.Scene = ChessScene()
+        self.Scene.start()
 
 class AppClass(ape.APEApp):
     pass
