@@ -1,5 +1,5 @@
 # This example explores a more advanced hexagonal grid with camera control and pathfinding
-#TODO: WIP: Still lacks rotation for moving units
+#TODO: WIP: Still has a few minor details that should be optimized / cleaned up
 # Author: Robin "Astus" Albers
 # Models: Robin "Astus" Albers (hexagon) and Eddie Canaan (cool chess pieces)
 
@@ -60,8 +60,6 @@ def window():
     # type: () -> MainWindowClass
     #w:MainWindowClass = _window()
     return _window()#w
-
-sys.path.append('..')
 
 #region Exceptions
 class HexException(Exception): pass
@@ -585,7 +583,8 @@ class _Hex():
             
     def moveUnitToHex(self,other):
         # type: (_Hex) -> bool
-        return self.Unit.moveTo(other)
+        if self.Unit:
+            return self.Unit.moveTo(other)
         #if self.Unit and not other.Unit:
         #    self.Unit.moveToHex(other)
         #    other.Unit = self.Unit
@@ -714,7 +713,7 @@ def findPath(start:_Hex, destination:_Hex, navigable = lambda hex: hex.Navigable
             return Path[1:]
         else:
             return []
-    except:
+    except: #Catches the case that Path is None #TODO: handle this case more cleanly
         return []
 
 #endregion Hex Map
@@ -751,7 +750,7 @@ class Object():
         
 class Unit():
     def __init__(self, coordinates, colour, name="a Unit", model="chessboard_models/knight"):
-        self.Model = model
+        self.Model = model #TODO: self.Model should be the model node and self.Node should be its parent that governs the postion. This way the model can be moved independently
         self.Name = name
         self.hex: weakref.ref[_Hex] = None
         self.Node = loader().loadModel(self.Model)
@@ -807,9 +806,20 @@ class Unit():
                 return False
             else:
                 seq = p3ddSequence(name = self.Name+" move")
+                lastPos = self.hex().Pos
+                lastAngle = self.Node.getHpr()[0]
                 for i in path:
-                    seq.append( self.Node.posInterval(0.5, i.Pos) ) #, startPos=Point3(0, 10, 0)))
-                
+                    theta = np.arctan2(i.Pos[0] - lastPos[0], lastPos[1] - i.Pos[1])
+                    if (theta < 0.0):
+                        theta += 2*np.pi
+                    angle = np.rad2deg(theta) + 180 # This +180 is probably nesseccary because the chess pieces have the wrong orientation but I might be wrong here
+                    if angle:
+                        angleBefore, angleAfter = self.improveRotation(lastAngle,angle)
+                        #seq.append( self.Node.hprInterval(0, (angleBefore,0,0) )
+                        seq.append( self.Node.hprInterval(0.1, (angleAfter,0,0), (angleBefore,0,0)) )
+                    seq.append( self.Node.posInterval(0.4, i.Pos) ) #, startPos=Point3(0, 10, 0)))
+                    lastPos = i.Pos
+                    lastAngle = angle
                 seq.start()
                 self.hex().Unit = None
                 hex.Unit = self
@@ -817,7 +827,22 @@ class Unit():
                 self.Coordinates = hex.Coordinates
                 self.MovePoints -= len(path)
                 return True
-        
+    
+    def improveRotation(self,c,t):
+        """
+        c is current rotation, t is target rotation. \n
+        returns two values that are equivalent to c and t but have values between -360 and 360 and have a difference of at most 180 degree.
+        """
+        ci = c%360
+        if ci > 180: ci -= 360
+        ti = t%360
+        if not abs(ci-ti) <= 180:
+            ti -= 360
+            if not abs(ci-ti) <= 180:
+                NC(2,"improveRotation needs improvements!!\nPlease send all contents of this notification to the developer Robin Albers!"
+                        ,func="improveRotation",input="c = {}\nt = {}\nci = {}\nti = {}\nd = {}\nsolution = {}".format(c,t,ci,ti,abs(ci-ti),abs(ci-ti) <= 180))
+        return ci,ti
+    
     def moveToCoordinates(self,coordinates):
         self.moveToHex(window().getHex(coordinates))
 
@@ -919,7 +944,7 @@ class MainWindowClass(ape.APELabWindow):#APEWindow):
         
         self.cw.setLayout(layout)
         
-        self.Console1.setText("self.Pawn = Unit((0,0),App().MiscColours[\"Self\"])\n")
+        self.Console1.setText("self.Pawn = Unit((25,25),App().MiscColours[\"Self\"])\n")
     
     def gen(self):
         self.HexGrid.generateHex()
