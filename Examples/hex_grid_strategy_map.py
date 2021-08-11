@@ -709,9 +709,12 @@ def findPath(start:_Hex, destination:_Hex, navigable = lambda hex: hex.Navigable
                 new_cost = cur_cost + cost(new_pos)
                 new_h = new_cost + destination.distance(new_pos)
                 heappush(Openset, (new_h, new_cost, new_pos, new_path))
-    if len(Path) > 1:
-        return Path[1:]
-    else:
+    try:
+        if len(Path) > 1:
+            return Path[1:]
+        else:
+            return []
+    except:
         return []
 
 #endregion Hex Map
