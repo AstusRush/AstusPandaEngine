@@ -1,12 +1,17 @@
 # This example explores a more advanced hexagonal grid with camera control and pathfinding
-#TODO: WIP: Still lack pathfinding
+#TODO: WIP: Still lacks rotation for moving units
 # Author: Robin "Astus" Albers
 # Models: Robin "Astus" Albers (hexagon) and Eddie Canaan (cool chess pieces)
 
 SupportsRenderPipeline = False
 
+TRANSPARENT_HEX_RINGS = True
+
+# Python standard imports 1/2
 import datetime
 import platform
+
+# Print into the console that the program is starting and set the application ID if we are on windows
 WindowTitle = "APE-Hex-Grid-Strategy-Map-Example"
 if __name__ == "__main__":
     print()
@@ -21,27 +26,30 @@ if __name__ == "__main__":
         except:
             pass
 
-# Python imports
+# Python standard imports 2/2
 import sys
 sys.path.append('..')
 import os
 import random
 import typing
-import importlib
+import weakref
 import inspect
+import importlib
+from heapq import heappush, heappop
 
+# External imports
 import numpy as np
 
 # Panda imports
 import panda3d as p3d
 import panda3d.core as p3dc
-from direct.showbase.ShowBase import ShowBase
+import direct as p3dd
+from direct.interval.IntervalGlobal import Sequence as p3ddSequence
 from direct.showbase.DirectObject import DirectObject
 from direct.gui.OnscreenText import OnscreenText
 from direct.task.Task import Task
-from direct.actor.Actor import Actor
 
-# AGE and APE imports
+# AGe and APE imports
 from AGeLib import *
 
 import AstusPandaEngine as ape
@@ -55,20 +63,30 @@ def window():
 
 sys.path.append('..')
 
-class OccupiedException(Exception):
-    """
-    This exception is raised when a hex is already occupied
-    """
-    def __init__(self, hex):
-        # type: (_Hex) -> None
-        super().__init__(f"{hex.Name} is already occupied by {hex.Unit.Name}")
+#region Exceptions
+class HexException(Exception): pass
 
-#region First we define some constants for the colors
-BLACK = (0, 0, 0, 1)
-WHITE = (1, 1, 1, 1)
-HIGHLIGHT = (0, 1, 1, 1)
-PIECEBLACK = (.15, .15, .15, 1)
-#endregion constants
+class HexOccupiedException(HexException):
+    """
+    This exception is raised when a hex is already occupied.
+    """
+    def __init__(self, hex=None):
+        # type: (_Hex) -> None
+        if hex:
+            super().__init__(f"{hex.Name} is already occupied by {hex.Unit.Name}.")
+        else:
+            super().__init__(f"The hex is already occupied.")
+
+class HexInvalidException(HexException):
+    """
+    This exception is raised when a hex does not exist.
+    """
+    def __init__(self, coords:typing.Tuple[int,int] = None):
+        if coords:
+            super().__init__(f"There is no hex at {coords}.")
+        else:
+            super().__init__(f"The specified hex does not exist.")
+#endregion Exceptions
 
 #region Now we define some helper functions that we will need later
 
@@ -99,6 +117,7 @@ class HexScene(ape.APEScene):
     def start(self):
         self.Camera = StrategyCamera()
         ape.base().win.setClearColor(p3dc.Vec4(0,0,0,1))
+        self.loadSkybox()
         
         # Per-pixel lighting and shadows are initially on
         self.perPixelEnabled = True
@@ -147,11 +166,17 @@ class HexScene(ape.APEScene):
             self.light.setShadowCaster(True, 1024, 1024)
             #  self.light2.setShadowCaster(True, 1024, 1024)
         self.updateStatusLabel()
+        
+    def loadSkybox(self):
+        self.Camera.loadSkybox()
 
 class StrategyCamera():
     def __init__(self):
         ape.base().win.setClearColor(p3dc.Vec4(0,0,0,1))
         self.Plane = p3dc.Plane(p3dc.Vec3(0, 0, 1), p3dc.Point3(0, 0, 0))
+        
+        self.SpaceSkyBoxCentre = None
+        self.SpaceSkyBox = None
         
         self.CameraCenter = p3dc.NodePath(p3dc.PandaNode("CameraCenter"))
         self.CameraCenter.reparentTo(ape.render())
@@ -207,6 +232,24 @@ class StrategyCamera():
         base().accept("alt-mouse2",    lambda: self.setCamMouseControl(True,True,True)) # alt + MMB
         #base().accept("alt-mouse2-up", lambda: self.setCamMouseControl(False,True,True)) # alt + MMB #VALIDATE: Is this triggered when either key is released?
         
+        
+    def loadSkybox(self):
+        if self.SpaceSkyBox:
+            self.SpaceSkyBox.removeNode()
+        if self.SpaceSkyBoxCentre:
+            self.SpaceSkyBoxCentre.removeNode()
+        size = 500
+        self.SpaceSkyBoxCentre = p3dc.NodePath(p3dc.PandaNode("SpaceSkyBoxCentre"))
+        self.SpaceSkyBoxCentre.reparentTo(ape.render())
+        self.SpaceSkyBox = loader().loadModel('Skybox Textures/Green Space 1/GreenSpace1.egg')
+        self.SpaceSkyBox.setScale(size)
+        self.SpaceSkyBox.setBin('background', 0)
+        self.SpaceSkyBox.setDepthWrite(0)
+        self.SpaceSkyBox.setTwoSided(True)
+        self.SpaceSkyBox.setTexGen(p3dc.TextureStage.getDefault(),p3dc.TexGenAttrib.MWorldCubeMap)
+        self.SpaceSkyBox.reparentTo(self.SpaceSkyBoxCentre)
+        self.SpaceSkyBox.setPos((-size/2,-size/2,-size/2))
+        
     def acceptAllCombinations(self, key, *args):
         base().accept(key, *args)
         base().accept("control-"+key, *args)
@@ -226,6 +269,7 @@ class StrategyCamera():
             self .CameraCenter.setY(    self.LimitY[0])
         elif self.CameraCenter.getY() > self.LimitY[1]:
             self .CameraCenter.setY(    self.LimitY[1])
+        self.SpaceSkyBoxCentre.setPos(self.CameraCenter.getPos())
     
     def setKey(self, key, value):
         """Records the state of camera movement keys"""
@@ -247,7 +291,7 @@ class StrategyCamera():
         self._enforceLimits()
         return task.cont
     
-    def zoomCamera(self, sign):
+    def zoomCamera(self, sign): #TODO: Support zoom-to-cursor and use it as a standard as it feels way more intuitive. Make a flag (as a member) that governs this behaviour
         y = -ape.base().camera.getY() + sign*5
         if y > 100: y = 100
         elif y < 5: y = 5
@@ -301,7 +345,7 @@ class StrategyCamera():
                     elif p > 90: p = 90
                     self.CameraRotCenter.setP(p)
                     self.CamMouseControlCentre = tuple(mpos)
-            else: #TODO: Make limits that can then be set by HexGrid to limit the camera to the relevant area
+            else:
                 if self.SmoothCam:
                     d = (mpos - self.CamMouseControlCentre)
                     self.CameraCenter.setX(self.CameraCenter, 0.5*d[0])
@@ -323,7 +367,8 @@ class StrategyCamera():
 
 #region Hex Map
 class HexGrid():
-    def __init__(self, scene:ape.APEScene=None, root:p3dc.NodePath = None, size: typing.Tuple[int,int] = (10,10)) -> None:
+    #TODO: Write a method that checks if given coordinates exist i.e. if they lie within the grid and use it in getHex
+    def __init__(self, scene:ape.APEScene=None, root:p3dc.NodePath = None, size: typing.Tuple[int,int] = (50,50)) -> None:
         self.Scene = scene if scene else engine().Scene
         if root:
             self.Root = root
@@ -344,10 +389,12 @@ class HexGrid():
         # Start the task that handles the picking
         self.mouseTask = base().taskMgr.add(self._mouseTask, 'mouseTask')
         
-        base().accept("mouse1", lambda: self.selectHex()) # LMB
-        base().accept("mouse3", lambda: self.interactWithHex()) # RMB
+        base().accept("mouse1", lambda: self._selectHighlightedHex()) # LMB
+        base().accept("mouse3", lambda: self._interactWithHighlightedHex()) # RMB
         
     def clearHexes(self):
+        self.HighlightedHex = False # type: _Hex
+        self.SelectedHex = False # type: _Hex
         for i in self.Hexes:
             for j in i:
                 del j
@@ -368,12 +415,44 @@ class HexGrid():
             for j,y in enumerate(np.linspace(limy1, limy2, self.Size[1])):
                 if i%2:
                     y += np.sqrt(3)/2
-                l.append(_Hex(self.Scene, self.Root, f"Hex ({i},{j})", (i,j), (y,x,0), "Blue"))
+                l.append(_Hex(self, self.Scene, self.Root, f"Hex ({i},{j})", (i,j), (y,x,0), "Blue"))
             self.Hexes.append(l)
             
-    def getHex(self, i:typing.Tuple[int,int]):
-        r:_Hex = self.Hexes[i[0]][i[1]]
-        return r
+    def getHex(self, i):
+        # type: ( typing.Union[typing.Tuple[int,int], typing.Tuple[int,int,int]] ) -> _Hex
+        if len(i) == 3:
+            i = self.cubeToCoord(i)
+        if len(i) == 2:
+            i = ( int(i[0]) , int(i[1]) )
+        else:
+            raise HexInvalidException(i)
+        if self._isValidCoordinate(i):
+            return self.Hexes[int(i[0])][int(i[1])]
+        else:
+            raise HexInvalidException(i)
+            
+    def _isValidCoordinate(self, i):
+        # type: ( typing.Union[typing.Tuple[int,int], typing.Tuple[int,int,int]] ) -> bool
+        if len(i) == 3:
+            i = self.cubeToCoord(i)
+        if len(i) != 2:
+            return False
+        if i[0] < 0 or i[0] >= len(self.Hexes):
+            return False
+        if i[1] < 0 or i[1] >= len(self.Hexes[i[0]]):
+            return False
+        return True
+    
+    def cubeToCoord(self, cube:typing.Tuple[int,int,int]) -> typing.Tuple[int,int]:
+        col = cube[0]
+        row = cube[2] + (cube[0] - (cube[0]&1)) / 2
+        return (col, row)
+    
+    def coordToCube(self, coord:typing.Tuple[int,int]) -> typing.Tuple[int,int,int]:
+        x = coord[0]
+        z = coord[1] - (coord[0] - (coord[0]&1)) / 2
+        y = -x-z
+        return (int(x), int(y), int(z))
     
   #region Interaction
     def _mouseTask(self, task):
@@ -413,10 +492,11 @@ class HexGrid():
                 # Set the highlight on the picked square
                 i.highlight()
                 self.HighlightedHex = i
+                window().Statusbar.showMessage(i.Name)
         
         return Task.cont
     
-    def selectHex(self):
+    def _selectHighlightedHex(self):
         if self.SelectedHex is not False:
             if self.SelectedHex is self.HighlightedHex:
                 self.SelectedHex.select(False)
@@ -431,16 +511,16 @@ class HexGrid():
             self.SelectedHex.select()
             self.HighlightedHex = False
     
-    def interactWithHex(self):
+    def _interactWithHighlightedHex(self):
         if self.SelectedHex is not False and self.HighlightedHex is not False:
             if self.SelectedHex.moveUnitToHex(self.HighlightedHex):
-                self.selectHex()
+                self._selectHighlightedHex()
   #endregion Interaction
 
 class _Hex():
     SELECT_COLOUR = "Yellow"
     HIGHLIGHT_COLOUR = "Light Blue"
-    def __init__(self, scene:ape.APEScene, root, name:str, coordinates:typing.Tuple[int,int], pos:typing.Tuple[int,int,int], colour: str):
+    def __init__(self, grid:HexGrid, scene:ape.APEScene, root, name:str, coordinates:typing.Tuple[int,int], pos:typing.Tuple[int,int,int], colour: str):
         try:
             # What we need:
             # - A hexagonal mesh for the click-detection and to highlight the hex
@@ -451,6 +531,11 @@ class _Hex():
             self.Colour = colour
             self.CurrentColour = colour
             self.Coordinates = coordinates
+            self.grid = weakref.ref(grid)
+            
+            # Save cube coordinates
+            self.CubeCoordinates = grid.coordToCube(coordinates)
+            
             self.Pos = p3dc.LPoint3(pos)
             mesh = "simple_models/hexagon.ply"
             meshRing = "simple_models/hexagonRing.ply"
@@ -458,6 +543,8 @@ class _Hex():
             self.Model = loader().loadModel(meshRing)
             self.Model.reparentTo(root)
             self.Model.setPos(self.Pos)
+            if TRANSPARENT_HEX_RINGS:
+                self.Model.setTransparency(p3dc.TransparencyAttrib.MAlpha)
             self.setColor(self.Colour)
             # Load, parent, hide, and position the face (a single hexagon polygon)
             self.Face = loader().loadModel(mesh)
@@ -477,6 +564,7 @@ class _Hex():
             # We will use this list to store all objects that occupy this hexagon
             self.content = [] # type: typing.List[Object]
             self.Unit = None # type: Unit
+            self.Navigable = True
         except:
             NC(1,f"Error while creating {name}",exc=True)
     
@@ -497,39 +585,134 @@ class _Hex():
             
     def moveUnitToHex(self,other):
         # type: (_Hex) -> bool
-        if self.Unit and not other.Unit:
-            self.Unit.moveToHex(other)
-            other.Unit = self.Unit
-            self.Unit = None
-            return True
-        else:
-            return False
+        return self.Unit.moveTo(other)
+        #if self.Unit and not other.Unit:
+        #    self.Unit.moveToHex(other)
+        #    other.Unit = self.Unit
+        #    self.Unit = None
+        #    return True
+        #else:
+        #    return False
     
-    def setColor(self,colour):
+    def setColor(self, colour, alpha = 0.2):
         if isinstance(colour,str):
             colour = App().PenColours[colour].color()
+            colour.setAlphaF(alpha)
         self.Model.setColor(ape.colour(colour))
     
-    def setColorFace(self,colour):
+    def setColorFace(self, colour, alpha = 0.2):
         if isinstance(colour,str):
             colour = App().PenColours[colour].color()
+            colour.setAlphaF(alpha)
         self.Face.setColor(ape.colour(colour))
         
     def highlight(self, highlight:bool = True):
         if highlight:
+            if TRANSPARENT_HEX_RINGS:
+                self.Model.setTransparency(p3dc.TransparencyAttrib.MNone)
             self.setColor(self.HIGHLIGHT_COLOUR)
         else:
+            if TRANSPARENT_HEX_RINGS and not self.CurrentColour == self.SELECT_COLOUR:
+                self.Model.setTransparency(p3dc.TransparencyAttrib.MAlpha)
             self.setColor(self.CurrentColour)
         
     def select(self, select:bool = True):
         if select:
             self.CurrentColour = self.SELECT_COLOUR
+            if TRANSPARENT_HEX_RINGS:
+                self.Model.setTransparency(p3dc.TransparencyAttrib.MNone)
             self.setColor(self.SELECT_COLOUR)
+            self.Face.setTransparency(p3dc.TransparencyAttrib.MAlpha)
             self.Face.show()
         else:
             self.CurrentColour = self.Colour
+            if TRANSPARENT_HEX_RINGS:
+                self.Model.setTransparency(p3dc.TransparencyAttrib.MAlpha)
             self.setColor(self.Colour)
+            self.Face.setTransparency(p3dc.TransparencyAttrib.MNone)
             self.Face.hide()
+            
+    def getNeighbour(self,direction=-1):
+        """
+        Returns the specified neighbour in direction if 0<=direction<=5 or else all neighbours. \n
+        Raises HexInvalidException if the specified neighbour does not exist (which can happen if this hex is at the edge of the map).
+        """
+        if 0 <= direction and direction <= 5:
+            return self.grid().getHex( [a+b for a,b in zip(self.CubeCoordinates, [
+                    (+1, -1, 0), (+1, 0, -1), (0, +1, -1),
+                    (-1, +1, 0), (-1, 0, +1), (0, -1, +1),
+                ][direction])])
+        else:
+            l = []
+            for i in [
+                        (+1, -1, 0), (+1, 0, -1), (0, +1, -1),
+                        (-1, +1, 0), (-1, 0, +1), (0, -1, +1),
+                    ]:
+                try:
+                    l.append(self.grid().getHex([a+b for a,b in zip(self.CubeCoordinates, i)]))
+                except HexInvalidException:
+                    pass
+            return l
+    
+    def distance(self, other):
+        """
+        Returns the distance in number of hexagon steps.
+        """
+        x1, y1, z1 = self.CubeCoordinates
+        x2, y2, z2 = other.CubeCoordinates if isinstance(other, _Hex) else other
+        return max(abs(x1 - x2), abs(y1 - y2), abs(z1 - z2))
+        
+    def __lt__(self, other):
+        # type: (_Hex) -> bool
+        return self.CubeCoordinates < other.CubeCoordinates
+
+def findPath(start:_Hex, destination:_Hex, navigable = lambda hex: hex.Navigable, cost = lambda hex: 1) -> typing.List[_Hex]:
+    """
+    The hex path finder. \n
+    Returns a list containing the hexes that form a shortest path between start and destination (including destination but excluding start). \n
+    start       : Starting hex for path finding. \n
+    destination : Destination hex for path finding. \n
+    navigable   : A function that, given a _Hex, tells us whether we can move through this hex. \n
+    cost        : A cost function for moving through a hex. Should return a value >= 1. By default all costs are 1. \n
+    """
+    Found = False
+    Done = False
+    Path: typing.List[_Hex] = None
+    Closedset = set()
+    Openset = [(destination.distance(start), 0, start, ())]
+    
+    def _compute_path(path):
+        result = []
+        while path:
+            pos, path = path
+            result.append(pos)
+        return result[::-1]
+    
+    while not Done:
+        for i in range(100):
+            if not Openset:
+                Done = True
+                break
+            h, cur_cost, pos, path = heappop(Openset)
+            if pos in Closedset:
+                continue
+            new_path = (pos, path)
+            if pos == destination:
+                Path = _compute_path(new_path)
+                Found = Done = True
+                del Openset[:]
+                break
+            Closedset.add(pos)
+            for new_pos in pos.getNeighbour():
+                if (not navigable(new_pos)) or (new_pos in Closedset):
+                    continue
+                new_cost = cur_cost + cost(new_pos)
+                new_h = new_cost + destination.distance(new_pos)
+                heappush(Openset, (new_h, new_cost, new_pos, new_path))
+    if len(Path) > 1:
+        return Path[1:]
+    else:
+        return []
 
 #endregion Hex Map
 
@@ -548,22 +731,29 @@ class Object():
         window().getHex(coordinates).content.append(self)
         
     def moveToPos(self,pos):
-        self.Node.setPos(pos)
+        self.setPos(pos)
         
     def moveToHex(self,hex:_Hex):
-        self.Node.setPos(hex.Pos)
+        self.setPos(hex.Pos)
         
     def moveToCoordinates(self,coordinates):
-        self.Node.setPos(getHexPos(coordinates))
+        self.setPos(getHexPos(coordinates))
+        
+    def setPos(self, pos):
+        self.Node.lookAt(pos)
+        self.Node.posInterval(pos,min(6,abs(sum(self.Node.getPos()-pos))))
     
     def __del__(self):
         self.Node.removeNode()
         
 class Unit():
-    def __init__(self, coordinates, colour, name="a Unit", model="chessboard_models/pawn"):
+    def __init__(self, coordinates, colour, name="a Unit", model="chessboard_models/knight"):
         self.Model = model
         self.Name = name
+        self.hex: weakref.ref[_Hex] = None
         self.Node = loader().loadModel(self.Model)
+        self.BaseMovePoints = float("inf") #10
+        self.MovePoints = self.BaseMovePoints
         try:
             self.Node.reparentTo(render())
             self.Node.setColor(ape.colour(colour))
@@ -572,22 +762,58 @@ class Unit():
             self.Node.removeNode()
             raise inst
         
-    def moveToPos(self,pos):
-        self.Node.setPos(pos)
-        
-    def moveToHex(self,hex:_Hex):
-        self.Node.setPos(hex.Pos)
+    #def moveToPos(self,pos):
+    #    self.Node.setPos(pos)
     
     def __del__(self):
         self.Node.removeNode()
         
-    def moveToHex(self,hex:_Hex):
+    def endTurn(self):
+        pass
+    
+    def beginTurn(self):
+        self.MovePoints = self.BaseMovePoints
+        
+    def moveToHex(self, hex:_Hex, animate= True):
         self.Coordinates = hex.Coordinates
         if hex.Unit:
-            raise OccupiedException(hex)
+            raise HexOccupiedException(hex)
         else:
-            self.Node.setPos(hex.Pos)
+            if animate and self.hex:
+                self.Node.lookAt(hex.Pos)
+                #time = min(6, np.sqrt(sum([i**2 for i in list(self.Node.getPos()-hex.Pos)])) )/6
+                time = min(6, self.hex().distance(hex) )/6
+                self.Node.posInterval(time, hex.Pos).start()
+            else:
+                self.Node.setPos(hex.Pos)
             hex.Unit = self
+            self.hex = weakref.ref(hex)
+            
+    def _navigable(self, hex:_Hex):
+        return (not bool(hex.Unit)) and hex.Navigable
+        
+    def _tileCost(self, hex:_Hex):
+        return 1
+            
+    def moveTo(self, hex:_Hex):
+        if not self._navigable(hex):
+            return False
+        else:
+            path = findPath(self.hex(), hex, self._navigable, self._tileCost)
+            if not path or len(path)>self.MovePoints:
+                return False
+            else:
+                seq = p3ddSequence(name = self.Name+" move")
+                for i in path:
+                    seq.append( self.Node.posInterval(0.5, i.Pos) ) #, startPos=Point3(0, 10, 0)))
+                
+                seq.start()
+                self.hex().Unit = None
+                hex.Unit = self
+                self.hex = weakref.ref(hex)
+                self.Coordinates = hex.Coordinates
+                self.MovePoints -= len(path)
+                return True
         
     def moveToCoordinates(self,coordinates):
         self.moveToHex(window().getHex(coordinates))
@@ -697,6 +923,12 @@ class MainWindowClass(ape.APELabWindow):#APEWindow):
             
     def start(self):
         self.HexGrid = HexGrid()
+        Unit((25,25),App().MiscColours["Self"],name="self",model="chessboard_models/knight")
+        Unit((27,22),App().MiscColours["Neutral"],name="a pawn",model="chessboard_models/pawn")
+        Unit((26,23),App().MiscColours["Neutral"],name="a pawn",model="chessboard_models/pawn")
+        Unit((25,23),App().MiscColours["Neutral"],name="a pawn",model="chessboard_models/pawn")
+        Unit((24,23),App().MiscColours["Neutral"],name="a pawn",model="chessboard_models/pawn")
+        Unit((23,22),App().MiscColours["Neutral"],name="a pawn",model="chessboard_models/pawn")
         
     def getHex(self, i:typing.Tuple[int,int]) -> _Hex:
         return self.HexGrid.getHex(i)
