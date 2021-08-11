@@ -43,8 +43,6 @@ from AGeLib import *
 import AstusPandaEngine as ape # pylint: disable = import-error
 from AstusPandaEngine import window, engine, base, render, loader # pylint: disable = import-error
 
-sys.path.append('..')
-
 
 HIGHLIGHT = (0, 1, 1, 1)
 

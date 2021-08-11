@@ -53,8 +53,6 @@ def window():
     #w:MainWindowClass = _window()
     return _window()#w
 
-sys.path.append('..')
-
 # This function, given a line (vector plus origin point) and a desired z value,
 # will give us the point on the line where the desired z value is what we want.
 # This is how we know where to position an object in 3D space based on a 2D mouse
