@@ -563,7 +563,7 @@ class _Hex():
             self.content = [] # type: typing.List[Object]
             self.Unit = None # type: Unit
             self.Navigable = True
-        except:
+        except:  #CRITICAL: Clean up all nodes by removing them if they were created!!
             NC(1,f"Error while creating {name}",exc=True)
     
     def __del__(self):
@@ -727,9 +727,9 @@ class Object():
             self.Node.reparentTo(render())
             self.Node.setColor(ape.colour(colour))
             self.Node.setPos(window().getHex(coordinates).Pos)
-        except Exception as inst:
+        except:# Exception as inst:  #VALIDATE: Does this work as intended?
             self.Node.removeNode()
-            raise inst
+            raise# inst
         window().getHex(coordinates).content.append(self)
         
     def moveToPos(self,pos):
@@ -796,13 +796,29 @@ class Unit():
         
     def _tileCost(self, hex:_Hex):
         return 1
-            
+        
     def moveTo(self, hex:_Hex):
         if not self._navigable(hex):
+            # The figure can not move to the hex but we can at least make it look at the hex
+            lastAngle = self.Node.getHpr()[0]
+            theta = np.arctan2(hex.Pos[0] - self.hex().Pos[0], self.hex().Pos[1] - hex.Pos[1])
+            if (theta < 0.0):
+                theta += 2*np.pi
+            angle = np.rad2deg(theta) + 180 # This +180 is probably nesseccary because the chess pieces have the wrong orientation but I might be wrong here
+            angleBefore, angleAfter = self.improveRotation(lastAngle,angle)
+            self.Node.hprInterval(abs(angleBefore - angleAfter)/(360), (angleAfter,0,0), (angleBefore,0,0)).start()
             return False
         else:
             path = findPath(self.hex(), hex, self._navigable, self._tileCost)
             if not path or len(path)>self.MovePoints:
+                # The figure can not move to the hex but we can at least make it look at the hex
+                lastAngle = self.Node.getHpr()[0]
+                theta = np.arctan2(hex.Pos[0] - self.hex().Pos[0], self.hex().Pos[1] - hex.Pos[1])
+                if (theta < 0.0):
+                    theta += 2*np.pi
+                angle = np.rad2deg(theta) + 180 # This +180 is probably nesseccary because the chess pieces have the wrong orientation but I might be wrong here
+                angleBefore, angleAfter = self.improveRotation(lastAngle,angle)
+                self.Node.hprInterval(abs(angleBefore - angleAfter)/(360), (angleAfter,0,0), (angleBefore,0,0)).start()
                 return False
             else:
                 seq = p3ddSequence(name = self.Name+" move")
@@ -813,10 +829,10 @@ class Unit():
                     if (theta < 0.0):
                         theta += 2*np.pi
                     angle = np.rad2deg(theta) + 180 # This +180 is probably nesseccary because the chess pieces have the wrong orientation but I might be wrong here
-                    if angle:
-                        angleBefore, angleAfter = self.improveRotation(lastAngle,angle)
+                    angleBefore, angleAfter = self.improveRotation(lastAngle,angle)
+                    if abs(angleBefore - angleAfter) > 2:
                         #seq.append( self.Node.hprInterval(0, (angleBefore,0,0) )
-                        seq.append( self.Node.hprInterval(0.1, (angleAfter,0,0), (angleBefore,0,0)) )
+                        seq.append( self.Node.hprInterval(abs(angleBefore - angleAfter)/(360), (angleAfter,0,0), (angleBefore,0,0)) )
                     seq.append( self.Node.posInterval(0.4, i.Pos) ) #, startPos=Point3(0, 10, 0)))
                     lastPos = i.Pos
                     lastAngle = angle

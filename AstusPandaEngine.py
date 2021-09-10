@@ -140,13 +140,21 @@ class PandaWidget(QtWidgets.QWidget):
 
     def resizeEvent(self, evt):
         wp = p3dc.WindowProperties()
-        wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
+        # This works with Qt5 but it does not work with Qt6 if the DPI of the screen is not 100% (thus creating a too small PandaWidget on 4k screens with 150% scaling)
+        # I will leave this code here in case the new code does not work correctly with older Qt5 versions
+        #wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
+        # This works with Qt5 and Qt6 for all DPI scalings
+        wp.setSize(round(self.width()*self.devicePixelRatioF())-round(self.width()*self.devicePixelRatioF())%4, round(self.height()*self.devicePixelRatioF())-round(self.height()*self.devicePixelRatioF())%4)
         wp.setOrigin(0,0)
         base().win.requestProperties(wp)
 
     def moveEvent(self, evt):
         wp = p3dc.WindowProperties()
-        wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
+        # This works with Qt5 but it does not work with Qt6 if the DPI of the screen is not 100% (thus creating a too small PandaWidget on 4k screens with 150% scaling)
+        # I will leave this code here in case the new code does not work correctly with older Qt5 versions
+        #wp.setSize(self.width()-self.width()%4, self.height()-self.height()%4)
+        # This works with Qt5 and Qt6 for all DPI scalings
+        wp.setSize(round(self.width()*self.devicePixelRatioF())-round(self.width()*self.devicePixelRatioF())%4, round(self.height()*self.devicePixelRatioF())-round(self.height()*self.devicePixelRatioF())%4)
         base().win.requestProperties(wp)
 	
     def minimumSizeHint(self):
@@ -267,7 +275,7 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
     print(AGeAux.cTimeSStr(),": ",name,"Application Startup")
     _app = app(sys.argv)
     _app.ModuleVersions += f"\nAstus Panda Engine {Version}\nPanda3D {p3d.__version__}"
-    UseRenderPipeline = QtWidgets.QMessageBox.question(None,"Render Pipeline","Do You want to use tobspr's Render Pipeline?\nThis will make everything look pretty at the cost of performance.") == QtWidgets.QMessageBox.Yes
+    UseRenderPipeline = QtWidgets.QMessageBox.question(None,"Render Pipeline","Do You want to use tobspr's Render Pipeline?\nThis will make everything look pretty at the cost of performance.") == QtWidgets.QMessageBox.Yes if tobsprRenderPipeline else False
     if UseRenderPipeline:
         # Insert the pipeline path to the system path, this is required to be
         # able to import the pipeline classes. In case you placed the render
@@ -313,7 +321,10 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
     _base.accept('keystroke', _base.keystrokeSignal)
     _base.accept('buttonDown', _base.buttonDownSignal)
     _base.accept('buttonUp', _base.buttonUpSignal)
-    _app.exec_()
+    try:
+        _app.exec_()
+    except:
+        _app.exec()
 
 #endregion Main Functions
 
