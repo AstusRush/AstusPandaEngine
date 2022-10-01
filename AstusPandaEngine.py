@@ -4,9 +4,18 @@ version = Version
 
 from AGeLib import *
 
+"""
+To get the linter for panda3d working:
+Explanation: https://stackoverflow.com/questions/72769867/autocompletion-for-panda3d-in-vscode
+Source: https://github.com/panda3d/panda3d/issues/1327
+Required files: https://github.com/WMOkiishi/types-panda3d/tree/master/src/panda3d-stubs
+Tool to download a directory from github: https://download-directory.github.io/
+"""
+
 import panda3d as p3d
 import panda3d.core as p3dc
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.Loader import Loader as p3dLoader
 
 from direct.showbase.MessengerGlobal import messenger
 
@@ -29,25 +38,25 @@ P3D_WIN_WIDTH = 400
 P3D_WIN_HEIGHT = 240
 
 #region shortcut functions
-def engine():
+def engine() -> 'APE':
     return App().engine
 
-def base():
+def base() -> 'APEPandaBase':
     return App().base
-    
-def render():
+
+def render() -> p3dc.NodePath:
     return App().base.render
-    
-def loader():
+
+def loader() -> p3dLoader:
     return App().base.loader
 
-def window():
+def window() -> 'APEWindow':
     return App().MainWindow
 
-def lightManager():
+def lightManager() -> Classes._lightManager:
     return App().lightManager
 
-def pipelineActive():
+def pipelineActive() -> bool:
     return App().RenderPipelineActive
 #endregion shortcut functions
 
@@ -62,11 +71,11 @@ def colour(colour: QtGui.QColor) -> typing.Tuple[float,float,float,float]:
 
 #region Engine Classes
 class APE():
-    def __init__(self, base, tobsprRenderPipeline):
+    def __init__(self, base:'APEPandaBase', tobsprRenderPipeline:bool):
         self.RenderPipelineActive = tobsprRenderPipeline
         self.base = base
         App().engine = self
-
+    
     def start(self):
         """
         This method is called at the end of `start()`. \n
@@ -77,24 +86,24 @@ class APE():
 class APEApp(AGeApp):
     def __init__(self, args = [], useExcepthook = True):
         super(APEApp, self).__init__(args,useExcepthook)
-        self.base = None #base
-        self.engine = None
-        self.RenderPipelineActive = False
-        self.lightManager = None
+        self.base:'APEPandaBase' = None #base
+        self.engine:'APE' = None
+        self.RenderPipelineActive:bool = False
+        self.lightManager:'Classes._lightManager' = None
         self.installEventFilter(self)
-
+    
     def eventFilter(self, source, event):
         try:
-             # switch control back to qt when the user clicks on the window
+            # switch control back to qt when the user clicks on the window
             if event.type() == 2 and source.window() == self.MainWindow and self.base.mainWinForeground: self.MainWindow.activateWindow()
         except: pass
         return super(APEApp, self).eventFilter(source, event) # let the normal eventFilter handle the event
-
-    def init_1(self, tobsprRenderPipeline):
+    
+    def init_1(self, tobsprRenderPipeline:bool):
         self.RenderPipelineActive = tobsprRenderPipeline
         self.lightManager = Classes._lightManager()
-
-    def init_2(self, base, engine):
+    
+    def init_2(self, base:'APEPandaBase', engine:'APE'):
         self.base = base
         self.engine = engine
 

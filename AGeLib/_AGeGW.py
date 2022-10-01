@@ -18,6 +18,8 @@ from distutils.spawn import find_executable
 if find_executable('latex') and find_executable('dvipng'): LaTeX_dvipng_Installed = True
 else : LaTeX_dvipng_Installed = False
 
+import typing
+
 #endregion Special Imports
 
 #CRITICAL: Use matplotlibImported and numpyImported
@@ -63,7 +65,7 @@ class MplWidget(QtWidgets.QWidget):
             self.Canvas.draw()
         except:
             ExceptionOutput(sys.exc_info())
-
+    
     #def eventFilter(self, source, event):
     #    if event.type() == QtCore.QEvent.PaletteChange:
     #        try:
@@ -77,7 +79,7 @@ class MplWidget(QtWidgets.QWidget):
 class MplCanvas_2D_Plot(FigureCanvasQTAgg):
     fig: Figure
     figure: Figure
-    ax: plt.Axes
+    ax: mplAxes
     def __init__(self):
         #plt.style.use('dark_background')
         if versionParser(matplotlib.__version__) >= versionParser("2.2"):
@@ -113,12 +115,16 @@ class MplWidget_2D_Plot(MplWidget):
         self.Layout.addWidget(self.Canvas)
         self.setLayout(self.Layout)
         self.layout().setContentsMargins(0,0,0,0)
-
+        if typing.TYPE_CHECKING:
+            self.plot = self.Canvas.ax.plot
+        else:
+            self.plot = lambda *args, **kwargs: self.Canvas.ax.plot(*args, **kwargs)
+    
     #def on_key_press(self, event): #mpl control
     #    # implement the default mpl key press events described at
     #    # http://matplotlib.org/users/navigation_toolbar.html#navigation-keyboard-shortcuts
     #    mpl_key_press_handler(event, self.Canvas, self.NavBar)
-        
+    
     def setColour(self,BG=None,FG=None,Cycler=None):
         """
         Sets all colours for the plot and redraws it. \n
@@ -149,7 +155,7 @@ class MplWidget_2D_Plot(MplWidget):
             except:
                 pass
         self.Canvas.draw()
-
+    
     def draw(self, recolour = True):
         """
         Recolours and redraws the canvas. This also resets the colour wheel. \n
@@ -159,7 +165,7 @@ class MplWidget_2D_Plot(MplWidget):
             self.setColour()
         else:
             self.Canvas.draw()
-
+    
     def clear(self, re_init_ax = False):
         """
         Clears all axes. \n
@@ -175,12 +181,12 @@ class MplWidget_2D_Plot(MplWidget):
         self.Canvas.draw()
     
     # CRITICAL: Add more convenience functions
-    def plot(self,x,y):
-        #CRITICAL: I am pretty sure that plot can take more arguments... (To be clear: That is sarcasm. Add support for all arguments.)
-        #CRITICAL: Try Except Block
-        self.Canvas.ax.plot(x,y)
-        self.Canvas.draw()
-        
+    #def plot(self,x,y): #CLEANUP: This redirect is now done in the __init__ and even gives the method annotation from mpl in the ide
+    #    #CRITICAL: I am pretty sure that plot can take more arguments... (To be clear: That is sarcasm. Add support for all arguments.)
+    #    #CRITICAL: Try Except Block
+    #    self.Canvas.ax.plot(x,y)
+    #    self.Canvas.draw()
+    
     def useTeX(self,TheBool):
         # This Method changes the settings for not only one but all widgets...
         # This makes the clear function of the plotter slow if the LaTeX display has been used in LaTeX mode directly before
@@ -192,7 +198,7 @@ class MplWidget_2D_Plot(MplWidget):
         matplotlib.rcParams['text.usetex'] = TheBool
         plt.rc('text', usetex=TheBool)
         return matplotlib.rcParams['text.usetex']
-
+    
     def plotThings(self,things): #CRITICAL: OVERHAUL THIS CONCEPT AND CHANGE THE ORDER OF THE VALUES IN THE TUPLE AND WRITE DOCUMENTATION
         if len(things) == 0:
             return
@@ -218,7 +224,7 @@ class MplWidget_2D_Plot(MplWidget):
                     y = i if isinstance(i,np.ndarray) else np.asarray(i)
                     x = range(y.shape[0])
                     name = ""
-            
+                
                 #self.ConsoleWidget.dpl()
                 if len(y.shape) == 1:
                     if name == "": name = "Unnamed with {} values".format(str(y.shape[0]))
@@ -295,7 +301,7 @@ class MplWidget_LaTeX(MplWidget): #CRITICAL: Verify (should already be in): Make
         self.StackedWidget.addWidget(self.Scroll)
         if self.QtWebEngineWidgetsImported:
             self.StackedWidget.addWidget(self.WebCanvas)
-        
+            
             self.ToggleButton = QtWidgets.QToolButton(self)
             self.ToggleButton.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
             self.ToggleButton.setMaximumSize(24, 24)
