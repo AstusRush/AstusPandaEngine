@@ -397,7 +397,7 @@ class ToolButton(QtWidgets.QToolButton):
             else:
                 f *= scale
         return f
-        
+    
     def updateToDPI(self):
         """
         Calls all set...Size methods with the previous values to adjust their DPI scaling.
@@ -406,7 +406,7 @@ class ToolButton(QtWidgets.QToolButton):
             self.setMinimumSize(*self._last_setMinimumSize)
         if self._last_setIconSize != (None,None):
             self.setIconSize(*self._last_setIconSize)
-        
+    
     def setMinimumSize(self, w,h = None):
         self._last_setMinimumSize = (w,h)
         if h is None:
@@ -415,8 +415,8 @@ class ToolButton(QtWidgets.QToolButton):
             t = (w,h)
         t = self.scaleToDPI(t)
         w,h = t
-        super(ToolButton, self).setMinimumSize(w,h)
-        
+        super(ToolButton, self).setMinimumSize(int(w),int(h))
+    
     def setIconSize(self, w,h = None):
         self._last_setIconSize = (w,h)
         if h is None:
@@ -425,7 +425,7 @@ class ToolButton(QtWidgets.QToolButton):
             t = (w,h)
         t = self.scaleToDPI(t)
         w,h = t
-        super(ToolButton, self).setIconSize(QtCore.QSize(w,h))
+        super(ToolButton, self).setIconSize(QtCore.QSize(int(w),int(h)))
 
 class MenuAction(QtWidgets.QAction):
     def __init__(self, parent=None, text=None, tooltip=None, action=None, add=False, icon=None):

@@ -527,7 +527,7 @@ class AGeApp(QtWidgets.QApplication):
                 PointSize = Family.pointSize()
             Family = Family.family()
             self.FontFamily = Family
-        elif Family == None:
+        elif Family is None:
             Family = self.FontFamily
         else:
             self.FontFamily = Family
