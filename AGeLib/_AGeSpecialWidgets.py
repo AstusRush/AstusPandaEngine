@@ -546,7 +546,7 @@ class _BrushDictWidget(QtWidgets.QTableWidget): #TODO
             y+=1
         self.setVerticalHeaderLabels(labels)
 
-class OptionsWidget_1_Appearance(QtWidgets.QWidget):
+class OptionsWidget_1_Appearance(QtWidgets.QWidget): #CRITICAL: Conform to naming convention: methods camelCase, members PascalCase
     """
     This widget allows the user to change the Font and the colourpalette of the application. \n
     It furthermore allows the user to create, save and load their own colour palette. \n
@@ -583,10 +583,10 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
         self.fontComboBox = QtWidgets.QFontComboBox(self)
         self.fontComboBox.currentFontChanged.connect(self.SetFontFamily)
         self.layout().addWidget(self.fontComboBox,0,1)
-        self.ColourListLabel = QtWidgets.QLabel(self)
+        self.ColourListLabel = QtWidgets.QLabel(self) #TODO: Rename to ThemeListLabel
         self.ColourListLabel.setText("Choose a colour theme:")
         self.layout().addWidget(self.ColourListLabel,1,0)
-        self.ColourList = QtWidgets.QComboBox(self)
+        self.ColourList = QtWidgets.QComboBox(self) #TODO: Rename to ThemeList
         self.ColourList.addItems(self.LoadPaletteList())
         self.ColourList.setCurrentText("Dark")
         if versionParser(QtCore.qVersion())>=versionParser("5.14"):
@@ -718,7 +718,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
         #self.NotificationColours = []
         #self.MiscColours = []
         #self.LexerColours = []
-        
+    
     def LoadPaletteList(self):
         App().refreshThemeList()
         return list(App().Themes.keys())
@@ -749,7 +749,11 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget):
         except:
             NC(1,"Exception while loading colour palette",exc=sys.exc_info(),func="MainApp.recolour")
         return ColourList
-        
+    
+    def refreshThemeList(self):
+        self.ColourList.clear()
+        self.ColourList.addItems(self.LoadPaletteList())
+    
     def MakeTheme(self):
         #TODO: Should this reload be here? If so: Shouldn't the list display "custom" or something like that?
         #       And if not there must be a special button for reloading the list (though there should be a button for this anyways...)
