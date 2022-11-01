@@ -105,6 +105,11 @@ def getPath(mustExist=False):
     else:
         raise FileNotFoundError("The file name was empty")
 
+def isInstanceOrSubclass(obj, cls):
+    if isinstance(obj, type):
+        return issubclass(obj, cls)
+    else:
+        return isinstance(obj, cls)
 #endregion
 
 

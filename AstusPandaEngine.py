@@ -61,7 +61,7 @@ def pipelineActive() -> bool:
 #endregion shortcut functions
 
 #region helper functions
-def colour(colour: QtGui.QColor) -> typing.Tuple[float,float,float,float]:
+def colour(colour: typing.Union[QtGui.QColor,QtGui.QBrush]) -> typing.Tuple[float,float,float,float]:
     if isinstance(colour, QtGui.QBrush): colour = colour.color()
     try:
         return (colour.redF(), colour.greenF(), colour.blueF(), colour.alphaF())

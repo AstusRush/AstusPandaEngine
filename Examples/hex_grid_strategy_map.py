@@ -752,7 +752,7 @@ class Unit():
     def __init__(self, coordinates, colour, name="a Unit", model="chessboard_models/knight"):
         self.Model = model #TODO: self.Model should be the model node and self.Node should be its parent that governs the postion. This way the model can be moved independently
         self.Name = name
-        self.hex: weakref.ref[_Hex] = None
+        self.hex: 'weakref.ref[_Hex]' = None
         self.Node = loader().loadModel(self.Model)
         self.BaseMovePoints = float("inf") #10
         self.MovePoints = self.BaseMovePoints
