@@ -117,7 +117,7 @@ class NotificationInfoWidget(ListWidget):
             self.clear()
             for k,v in Notification.items():
                 try:
-                    if v != None:
+                    if v is not None:
                         item = QtWidgets.QListWidgetItem()
                         item.setText(k+str(v))
                         self.addItem(item)
@@ -807,7 +807,7 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget): #CRITICAL: Conform to namin
         #window.AMaDiA_About_Window_Window.TextBrowser.setText(app.optionWindow.ColourPicker.PaletteToPython(AGeColour.Colours[app.optionWindow.ColourPicker.LoadPaletteList()[0]],app.optionWindow.ColourPicker.LoadPaletteList()[0])[0])
         try:
             Palette1, Palette2, Palette3, _PenColours, _NotificationColours, _MiscColours, _LexerColours = Palette()
-            if _LexerColours == None or len(_LexerColours)<5: raise Exception("_LexerColours is either None or has less than 5 Elements")
+            if _LexerColours is None or len(_LexerColours)<5: raise Exception("_LexerColours is either None or has less than 5 Elements")
         except:
             Palette1, Palette2, Palette3, _PenColours, _NotificationColours, _MiscColours = Palette()
             _LexerColours =  {
@@ -866,10 +866,10 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget): #CRITICAL: Conform to namin
         return Text,FunctionName,Name
     
     def SavePalette(self,Name=None): #TODO:OVERHAUL
-        if Name == None:
+        if Name is None:
             Name = QtWidgets.QInputDialog.getText(self,"Palette Name","What should the palette be called?")[0].strip()
             # VALIDATE: Ensure that the names can not break the dictionary
-            if Name == None or Name == "":
+            if Name is None or Name == "":
                 NC(2,"SavePalette has been cancelled")
                 return ""
         Text = AGeToPy.formatObject(self.ThemeWidget.getDict(Name))
@@ -933,10 +933,10 @@ class OptionsWidget_1_Appearance(QtWidgets.QWidget): #CRITICAL: Conform to namin
             NC(1,"Could not save",exc=sys.exc_info())
         return Text
         # window.AMaDiA_About_Window_Window.TextBrowser.setText(app.optionWindow.ColourPicker.SavePalette("Test"))
-        if Name == None:
+        if Name is None:
             Name = QtWidgets.QInputDialog.getText(self,"Palette Name","What should the palette be called?")[0].strip()
             # VALIDATE: Ensure that the names can not break the dictionary
-            if Name == None or Name == "":
+            if Name is None or Name == "":
                 NC(2,"SavePalette has been cancelled")
                 return ""
         #Text = "from PyQt5 import QtCore, QtGui\n\ndef NewColour():\n    palette1 = QtGui.QPalette()\n    palette2 = QtGui.QPalette()\n    palette3 = QtGui.QPalette()"

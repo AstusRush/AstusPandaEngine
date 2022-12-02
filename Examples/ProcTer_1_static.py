@@ -488,7 +488,7 @@ class Terrain(ape.APEPandaBase):
         Raises:
             ValueError: If shape is not a multiple of res.
         """
-        if interpolant == None:
+        if interpolant is None:
             interpolant = self.interpolant
         delta = (res[0] / shape[0], res[1] / shape[1])
         d = (shape[0] // res[0], shape[1] // res[1])

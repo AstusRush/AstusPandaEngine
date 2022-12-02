@@ -25,7 +25,7 @@ class BaseTextEdit(QtWidgets.QTextEdit):
         QtWidgets.QTextEdit.__init__(self, parent)
         self.installEventFilter(self)
         self.setTabChangesFocus(True)
-        
+    
     def eventFilter(self, source, event):
         # type: (QtWidgets.QWidget|BaseTextEdit, QtCore.QEvent|QtGui.QKeyEvent) -> bool
         if event.type() == QtCore.QEvent.KeyPress:
@@ -123,6 +123,7 @@ class LineEdit(BaseTextEdit):
         self.RowHeightFactor = 1 #1.4
         self.RowHeightSpacer = 10
         self.RowHeight = QtGui.QFontMetrics(self.font()).height()*self.RowHeightFactor + self.RowHeightSpacer
+        #self.setSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding,QtWidgets.QSizePolicy.Policy.Fixed)
         self.setFixedHeight(self.RowHeight)
         self.setLineWrapMode(QtWidgets.QTextEdit.NoWrap)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -361,7 +362,7 @@ class Button(QtWidgets.QPushButton):
     def __init__(self, parent = None, Text = "", Action=None):
         super(Button, self).__init__(parent)
         self.setText(Text)
-        if Action != None:
+        if Action is not None:
             self.clicked.connect(Action)
 
 class ToolButton(QtWidgets.QToolButton):
@@ -429,16 +430,16 @@ class ToolButton(QtWidgets.QToolButton):
 
 class MenuAction(QtWidgets.QAction):
     def __init__(self, parent=None, text=None, tooltip=None, action=None, add=False, icon=None):
-        if text != None:
-            if icon != None:
+        if text is not None:
+            if icon is not None:
                 super(MenuAction, self).__init__(icon,text,parent)
             else:
                 super(MenuAction, self).__init__(text,parent)
         else:
             super(MenuAction, self).__init__(parent)
-        if tooltip != None:
+        if tooltip is not None:
             self.setToolTip(tooltip)
-        if action != None:
+        if action is not None:
             if type(action) != list:
                 action = [action]
             for i in action:
@@ -448,7 +449,7 @@ class MenuAction(QtWidgets.QAction):
         self.hovered.connect(self.showToolTip)
     
     def showToolTip(self):
-        #if self.toolTip() != "" and self.toolTip() != None and self.toolTip() != self.text():
+        #if self.toolTip() != "" and self.toolTip() is not None and self.toolTip() != self.text():
         QtWidgets.QToolTip.showText(QtGui.QCursor.pos(),self.toolTip())#,self)
 
 #endregion Button/Action Widgets
@@ -627,11 +628,15 @@ class _TextAddon_Finder_Floater(QtWidgets.QWidget):
 
 #region layout
 class TightGridWidget(QtWidgets.QWidget):
-    def __init__(self, parent: typing.Optional['QtWidgets.QWidget'] = None) -> None:
+    def __init__(self, parent: typing.Optional['QtWidgets.QWidget'] = None, makeCompact:bool=True) -> None:
         super().__init__(parent=parent)
         self.setLayout(QtWidgets.QGridLayout(self))
         self.layout().setObjectName("gridLayout")
         self.layout().setContentsMargins(0,0,0,0)
+        if makeCompact: self.makeCompact()
+    
+    def makeCompact(self):
+        self.layout().setRowStretch(1000, 1)
     
     def addWidget(self, widget, *args, **kwargs):
         """
@@ -653,12 +658,16 @@ class TightGridWidget(QtWidgets.QWidget):
         #        return None
 
 class TightGridFrame(QtWidgets.QFrame):
-    def __init__(self, parent: typing.Optional['QtWidgets.QWidget'] = None) -> None:
+    def __init__(self, parent: typing.Optional['QtWidgets.QWidget'] = None, makeCompact:bool=True) -> None:
         super().__init__(parent=parent)
         self.setFrameStyle(self.Box | self.Sunken)
         self.setLayout(QtWidgets.QGridLayout(self))
         self.layout().setObjectName("gridLayout")
         #self.layout().setContentsMargins(0,0,0,0)
+        if makeCompact: self.makeCompact()
+    
+    def makeCompact(self):
+        self.layout().setRowStretch(1000, 1)
     
     def addWidget(self, widget, *args, **kwargs):
         """

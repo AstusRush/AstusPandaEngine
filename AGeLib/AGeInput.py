@@ -5,6 +5,7 @@ from ._AGeInput import(
     Float,
     Bool,
     Str,
+    Name,
     Path,
     List,
     Array,
