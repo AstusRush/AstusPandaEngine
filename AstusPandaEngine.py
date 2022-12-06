@@ -393,9 +393,10 @@ class APELabWindow(AWWF):
         self.Inspect.setGlobals(self.globals())
         self.TabWidget.addTab(self.Inspect, "Inspect")
         
+        self.BalanceSizes = True
         self.setupUI()
         
-        self.CentralSplitter.setSizes([App().primaryScreen().size().width(),App().primaryScreen().size().width()])
+        if self.BalanceSizes: self.CentralSplitter.setSizes([App().screenAt(QtGui.QCursor().pos()).size().width()/2, App().screenAt(QtGui.QCursor().pos()).size().width()/2])
 
     def setupUI(self):
         """
