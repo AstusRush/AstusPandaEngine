@@ -93,7 +93,7 @@ class MainWindowClass(ape.APEWindow):
     def setupUI(self):
         self.main_layout = QtWidgets.QVBoxLayout()
         self.main_layout.setContentsMargins(0,0,0,0)
-        self.main_layout.addWidget(self.pandaContainer)
+        self.main_layout.addWidget(self.PandaContainer)
         self.dialLayout = QtWidgets.QHBoxLayout()
         self.dialLayout.setContentsMargins(10,0,10,0)
         self.dialLayoutWidget = QtWidgets.QWidget(self)

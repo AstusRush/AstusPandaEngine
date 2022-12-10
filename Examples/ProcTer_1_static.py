@@ -591,11 +591,11 @@ class MainWindowClass(ape.APEWindow):
         If you want a different layout reimplement this Method. \n
         All you need to do is to create a layout and apply it to `self.cw`.\n
         `self.cw` is automatically set as the Central Widget. \n
-        `self.pandaContainer` is the Panda3D Widget and is created automatically.
+        `self.PandaContainer` is the Panda3D Widget and is created automatically.
         """
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.pandaContainer)
+        layout.addWidget(self.PandaContainer)
         
         self.genWidget = QtWidgets.QWidget(self)
         genLayout = QtWidgets.QHBoxLayout()

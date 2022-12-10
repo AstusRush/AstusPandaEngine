@@ -261,7 +261,7 @@ class MainWindowClass(ape.APELabWindow):
     def setupUI(self):
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.pandaContainer)
+        layout.addWidget(self.PandaContainer)
         
         self.genWidget = QtWidgets.QWidget(self)
         genLayout = QtWidgets.QHBoxLayout()

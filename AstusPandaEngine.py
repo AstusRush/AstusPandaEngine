@@ -117,21 +117,21 @@ class APEWindow(AWWF):
         self.setWindowTitle("Test")
         
         self.cw = QtWidgets.QWidget(self)
-        self.pandaContainer = widget(self.cw)
+        self.PandaContainer:'PandaWidget' = widget(self.cw)
         self.setupUI()
         self.setCentralWidget(self.cw)
-
+    
     def setupUI(self):
         """
         This Method sets up the UI. \n
         If you want a different layout reimplement this Method. \n
         All you need to do is to create a layout and apply it to `self.cw`.\n
         `self.cw` is automatically set as the Central Widget. \n
-        `self.pandaContainer` is the Panda3D Widget and is created automatically.
+        `self.PandaContainer` is the Panda3D Widget and is created automatically.
         """
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.pandaContainer)
+        layout.addWidget(self.PandaContainer)
         
         self.lineedit = AGeWidgets.LineEdit(self, PlaceholderText = "Write something and press return to generate a Notification")
         def sendMessage():
@@ -146,7 +146,7 @@ class PandaWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(PandaWidget, self).__init__(parent)
         self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
-
+    
     def resizeEvent(self, evt):
         wp = p3dc.WindowProperties()
         # This works with Qt5 but it does not work with Qt6 if the DPI of the screen is not 100% (thus creating a too small PandaWidget on 4k screens with 150% scaling)
@@ -156,7 +156,7 @@ class PandaWidget(QtWidgets.QWidget):
         wp.setSize(round(self.width()*self.devicePixelRatioF())-round(self.width()*self.devicePixelRatioF())%4, round(self.height()*self.devicePixelRatioF())-round(self.height()*self.devicePixelRatioF())%4)
         wp.setOrigin(0,0)
         base().win.requestProperties(wp)
-
+    
     def moveEvent(self, evt):
         wp = p3dc.WindowProperties()
         # This works with Qt5 but it does not work with Qt6 if the DPI of the screen is not 100% (thus creating a too small PandaWidget on 4k screens with 150% scaling)
@@ -173,7 +173,8 @@ class APEPandaBase(ShowBase):
     def __init__(self,rp):
         ShowBase.__init__(self)
         self.render_pipeline = rp
-
+        self._lastForcedForeground = None
+    
     def keystrokeSignal(self, keyname):
         self.MainWindow.S_PandaKeystroke.emit(keyname)
     def buttonDownSignal(self, keyname):
@@ -181,40 +182,75 @@ class APEPandaBase(ShowBase):
     def buttonUpSignal(self, keyname):
         self.MainWindow.S_PandaButtonUp.emit(keyname)
     
-    def registerWindow(self,window):
-        self.MainWindow = window
+    def registerWindow(self,window:'APEWindow'):
+        self.MainWindow:'APEWindow' = window
         self.accept("f11", lambda: self.MainWindow.toggleFullscreen())
         self.accept("f12", lambda: App().makeScreenshot(self.MainWindow))
+        #CRITICAL: When holding a key while moving the mouse off the panda3d window the key is never released which is really bad
         wp = p3dc.WindowProperties()
         wp.setOrigin(0,0)
         wp.setSize(P3D_WIN_WIDTH, P3D_WIN_HEIGHT)
-        wp.set_parent_window(int(self.MainWindow.pandaContainer.winId()))
+        wp.set_parent_window(int(self.MainWindow.PandaContainer.winId())) #CRITICAL: Use a "WindowHandle" instead since the int version is deprecated!
         #wp.
         self.openDefaultWindow(props=wp)
-        
+        # Note the lack of parentheses here!
+        self.taskMgr.add(self.focusUpdaterTask)
+    
     def step(self):
         self.taskMgr.step()
-        
-    def windowEvent(self, win):
+    
+    async def focusUpdaterTask(self, task):
+        if self.MainWindow.isActiveWindow():
+            #if self.win.get_pointer(0).getInWindow(): # panda3d is not reliable so I use Qt instead
+            if self.MainWindow.PandaContainer.rect().contains(self.MainWindow.PandaContainer.mapFromGlobal(QtGui.QCursor().pos())):
+                #if not self.win.getProperties().getForeground(): # This is once again not reliable and I therefore need to keep track of it myself...
+                if self._lastForcedForeground is not True:
+                    # Ensure that the panda3d widget becomes active when its APE Window is active the mouse is inside the panda3d widget
+                    wp = p3dc.WindowProperties()
+                    wp.set_foreground(True)
+                    self._lastForcedForeground = True
+                    #print("Forcing Foreground: True")
+                    self.win.requestProperties(wp)
+            else:
+                #if self.win.getProperties().getForeground(): # This is once again not reliable and I therefore need to keep track of it myself...
+                if self._lastForcedForeground is not False:
+                    # Ensure that the panda3d widget becomes inactive when the mouse leaves it since it can not receive button inputs if the mouse is gone
+                    wp = p3dc.WindowProperties()
+                    wp.set_foreground(False)
+                    self._lastForcedForeground = False
+                    #print("Forcing Foreground: False")
+                    self.win.requestProperties(wp)
+        else:
+            #if self.win.getProperties().getForeground(): # This is once again not reliable and I therefore need to keep track of it myself...
+            if self._lastForcedForeground is not False:
+                # Ensure the the panda3d widget knows that it is inactive when its APE window is not active
+                wp = p3dc.WindowProperties()
+                wp.set_foreground(False)
+                self._lastForcedForeground = False
+                #print("Forcing Foreground: False")
+                self.win.requestProperties(wp)
+        return task.cont
+    
+    def windowEvent(self, win:'p3dc.GraphicsWindow'):
         if win != self.win:
             # This event isn't about our window.
             return
-
+        
         properties = win.getProperties()
         if properties != self._ShowBase__prevWindowProperties: # pylint: disable=access-member-before-definition
             self._ShowBase__prevWindowProperties = properties # pylint: disable=access-member-before-definition
-
+            
             self.notify.debug("Got window event: %s" % (repr(properties)))
             if not properties.getOpen():
                 # If the user closes the main window, we should exit.
                 self.notify.info("User closed main window.")
                 self.userExit()
-
+            
             if properties.getForeground() and not self.mainWinForeground:
                 self.mainWinForeground = 1
             elif not properties.getForeground() and self.mainWinForeground:
                 self.mainWinForeground = 0
-
+            
             if properties.getMinimized() and not self.mainWinMinimized:
                 # If the main window is minimized, throw an event to
                 # stop the music.
@@ -225,11 +261,11 @@ class APEPandaBase(ShowBase):
                 # restart the music.
                 self.mainWinMinimized = 0
                 messenger.send('PandaRestarted')
-
+            
             # If we have not forced the aspect ratio, let's see if it has
             # changed and update the camera lenses and aspect2d parameters
             self.adjustWindowAspectRatio(self.getAspectRatio())
-
+            
             if win.hasSize() and win.getSbsLeftYSize() != 0:
                 self.pixel2d.setScale(2.0 / win.getSbsLeftXSize(), 1.0, 2.0 / win.getSbsLeftYSize())
                 if self.wantRender2dp:
@@ -341,11 +377,11 @@ def start(name = "APE Test", engine = APE, base = APEPandaBase, app = APEApp, wi
 class APEScene():
     def __init__(self):
         self._models = {}
-
+    
     def addModel(self, model, name):
         self._models[name] = model
         return model
-        
+    
 class APEObject():
     def __init__(self):
         pass
@@ -370,8 +406,8 @@ class APELabWindow(AWWF):
         self.TabWidget = QtWidgets.QTabWidget(self.CentralSplitter)
         #
         self.cw = QtWidgets.QWidget(self.CentralSplitter)
-        self.pandaContainer = widget(self.cw)
-        self.pandaContainer.installEventFilter(self)
+        self.PandaContainer = widget(self.cw)
+        self.PandaContainer.installEventFilter(self)
         
         self.Console1 = AGeIDE.ConsoleWidget(self)
         self.Console1.setGlobals(self.globals())
@@ -397,30 +433,30 @@ class APELabWindow(AWWF):
         self.setupUI()
         
         if self.BalanceSizes: self.CentralSplitter.setSizes([App().screenAt(QtGui.QCursor().pos()).size().width()/2, App().screenAt(QtGui.QCursor().pos()).size().width()/2])
-
+    
     def setupUI(self):
         """
         This Method sets up the UI. \n
         If you want a different layout reimplement this Method. \n
         All you need to do is to create a layout and apply it to `self.cw`.\n
         `self.cw` is automatically set as the Central Widget. \n
-        `self.pandaContainer` is the Panda3D Widget and is created automatically.
+        `self.PandaContainer` is the Panda3D Widget and is created automatically.
         """
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
-        layout.addWidget(self.pandaContainer)
+        layout.addWidget(self.PandaContainer)
         
         self.cw.setLayout(layout)
-        
+    
     def eventFilter(self, source, event):
         #if event.type() == 6: # QtCore.QEvent.KeyPress
         #if hasattr(self,"AGE"):
         #    self.AGE.eventFilter(source, event)
         return super().eventFilter(source, event) # let the normal eventFilter handle the event
-
+    
     def globals(self):
         return vars(sys.modules['__main__'])
-
+    
     def gen(self):
         pass
 
