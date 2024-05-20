@@ -58,6 +58,9 @@ def lightManager() -> Classes._lightManager:
 
 def pipelineActive() -> bool:
     return App().RenderPipelineActive
+
+def loadModel(*args,**argv) -> p3dc.NodePath:
+    return loader().loadModel(*args,**argv)
 #endregion shortcut functions
 
 #region helper functions
