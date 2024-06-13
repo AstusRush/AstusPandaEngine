@@ -47,7 +47,7 @@ class MplWidget(QtWidgets.QWidget):
             self.background_Colour = BG
         if FG is not None:
             self.TextColour = FG
-        if type(Cycler) is not None:
+        if Cycler is not None:
             self.Cycler = Cycler
         self.HexcolourText = '#%02x%02x%02x' % (int(self.TextColour[0]*255),int(self.TextColour[1]*255),int(self.TextColour[2]*255))
         try:
