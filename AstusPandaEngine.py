@@ -85,6 +85,17 @@ class APE():
         Reimplement this method with the stuff that starts your game.
         """
         pass
+    
+    def processAndRender(self):
+        App().processEvents()
+        base().graphicsEngine.renderFrame()
+        base().eventMgr.doEvents()
+        base().graphicsEngine.renderFrame()
+        base().eventMgr.doEvents()
+    
+    def fastRender(self):
+        base().graphicsEngine.renderFrame()
+        base().eventMgr.doEvents()
 
 class APEApp(AGeApp):
     def __init__(self, args = [], useExcepthook = True):
