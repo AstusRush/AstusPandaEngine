@@ -702,4 +702,14 @@ class TightGridFrame(QtWidgets.QFrame):
         #    else:
         #        NC(1,f"{widget} is not a subclass of QtWidgets.QWidget!", input=args, func=f"{type(self)}.addWidget")
         #        return None
+    
+    def __iter__(self):
+        layout = self.layout()
+        for row in range(layout.rowCount()):
+            for col in range(layout.columnCount()):
+                item = layout.itemAtPosition(row, col)
+                if item is not None:
+                    widget = item.widget()
+                    if widget is not None:
+                        yield widget
 #endregion layout
