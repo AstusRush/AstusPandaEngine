@@ -3,6 +3,10 @@ Version = "developer preview"
 version = Version
 
 from AGeLib import *
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    # These imports make the IDE happy
+    from ..AstusPandaEngine.AGeLib import *
 
 """
 To get the linter for panda3d working:
@@ -43,6 +47,9 @@ def engine() -> 'APE':
 
 def base() -> 'APEPandaBase':
     return App().base
+
+def globalClock() -> 'p3dc.ClockObject':
+    return __builtins__["globalClock"]
 
 def render() -> p3dc.NodePath:
     return App().base.render
