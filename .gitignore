@@ -12,10 +12,11 @@ Config
 Test.py
 first Tries/
 
+tobsprRenderPipeline/*
+tobspr*
+
 Examples/terrainGen_1/tiles/
 Examples/terrainGen_1/hmaps/
 Examples/temp
 temp_*/
-
-!WINDOWS-INSTALL/**
 

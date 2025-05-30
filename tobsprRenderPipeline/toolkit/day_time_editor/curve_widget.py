@@ -172,14 +172,14 @@ class CurveWidget(QWidget):
         self.update()
 
     def _get_y_value_for(self, local_value):
-        """ Converts a value from 0 to 1 to a value from 0 .. Canvas height """
+        """ Converts a value from 0 to 1 to a value from 0 .. canvas height """
         local_value = max(0, min(1.0, 1.0 - local_value))
         local_value *= self.height() - self._legend_border - self._bar_h
         local_value += self._bar_h
         return local_value
 
     def _get_x_value_for(self, local_value):
-        """ Converts a value from 0 to 1 to a value from 0 .. Canvas width """
+        """ Converts a value from 0 to 1 to a value from 0 .. canvas width """
         local_value = max(0, min(1.0, local_value))
         local_value *= self.width() - self._legend_border
         return local_value
